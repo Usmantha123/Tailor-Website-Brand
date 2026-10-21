@@ -1,0 +1,13 @@
+# Sensitive Keys & Environment Configuration
+serviceAccountKey.json
+.env
+
+# Python & Virtual Environment
+__pycache__/
+*.pyc
+venv/
+instance/
+
+# Database files
+*.db
+*.sqlite3

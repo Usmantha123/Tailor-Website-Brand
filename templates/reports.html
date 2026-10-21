@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+
+{% block title %}Business Reports & Insights - Tailor Shop Management{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Reports & Business Insights</h1>
+        <p class="page-subtitle">Operational summary, status counts, and sales overview.</p>
+    </div>
+</div>
+
+<!-- Overview Stats Grid -->
+<div class="stats-grid">
+    <!-- Stat 1: Total Order Value / Revenue -->
+    <div class="stat-card">
+        <div class="stat-info">
+            <span class="stat-label">Total Orders Revenue</span>
+            <span class="stat-value">${{ "%.2f"|format(reports.total_revenue) }}</span>
+        </div>
+        <div class="stat-icon-wrapper icon-green" style="background-color: #dcfce7; color: #15803d;">
+            💵
+        </div>
+    </div>
+
+    <!-- Stat 2: Total Orders -->
+    <div class="stat-card">
+        <div class="stat-info">
+            <span class="stat-label">Total Orders</span>
+            <span class="stat-value">{{ reports.total_orders }}</span>
+        </div>
+        <div class="stat-icon-wrapper icon-blue">
+            ✂️
+        </div>
+    </div>
+
+    <!-- Stat 3: Total Customers -->
+    <div class="stat-card">
+        <div class="stat-info">
+            <span class="stat-label">Total Registered Clients</span>
+            <span class="stat-value">{{ reports.total_customers }}</span>
+        </div>
+        <div class="stat-icon-wrapper icon-amber">
+            👥
+        </div>
+    </div>
+
+    <!-- Stat 4: Completed Orders -->
+    <div class="stat-card">
+        <div class="stat-info">
+            <span class="stat-label">Delivered Orders</span>
+            <span class="stat-value">{{ reports.delivered_count }}</span>
+        </div>
+        <div class="stat-icon-wrapper icon-purple">
+            ✅
+        </div>
+    </div>
+</div>
+
+<!-- Order Status Breakdown Cards -->
+<div class="card-section">
+    <div class="section-header">
+        <h2 class="section-title">Order Status Breakdown</h2>
+    </div>
+
+    <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px;">
+        <div class="stat-card" style="border-left: 4px solid #d97706;">
+            <div>
+                <span class="stat-label">Pending Orders</span>
+                <div class="stat-value" style="color: #d97706;">{{ reports.pending_count }}</div>
+            </div>
+        </div>
+
+        <div class="stat-card" style="border-left: 4px solid #2563eb;">
+            <div>
+                <span class="stat-label">In Progress</span>
+                <div class="stat-value" style="color: #2563eb;">{{ reports.in_progress_count }}</div>
+            </div>
+        </div>
+
+        <div class="stat-card" style="border-left: 4px solid #7e22ce;">
+            <div>
+                <span class="stat-label">Ready for Delivery</span>
+                <div class="stat-value" style="color: #7e22ce;">{{ reports.ready_count }}</div>
+            </div>
+        </div>
+
+        <div class="stat-card" style="border-left: 4px solid #15803d;">
+            <div>
+                <span class="stat-label">Delivered Orders</span>
+                <div class="stat-value" style="color: #15803d;">{{ reports.delivered_count }}</div>
+            </div>
+        </div>
+
+        <div class="stat-card" style="border-left: 4px solid #b91c1c;">
+            <div>
+                <span class="stat-label">Cancelled Orders</span>
+                <div class="stat-value" style="color: #b91c1c;">{{ reports.cancelled_count }}</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Orders Activity -->
+<div class="card-section">
+    <div class="section-header">
+        <h2 class="section-title">Recent Order Activity</h2>
+        <a href="{{ url_for('orders') }}" class="btn btn-secondary btn-sm">Manage All Orders</a>
+    </div>
+
+    <div class="table-responsive">
+        {% if recent_orders and recent_orders|length > 0 %}
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Order ID</th>
+                    <th>Customer Name</th>
+                    <th>Item Description</th>
+                    <th>Due Date</th>
+                    <th>Price</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for order in recent_orders %}
+                <tr>
+                    <td><strong>#ORD-00{{ order.id }}</strong></td>
+                    <td>{{ order.customer_name }}</td>
+                    <td>{{ order.item }}</td>
+                    <td>{{ order.due_date if order.due_date else 'N/A' }}</td>
+                    <td>${{ "%.2f"|format(order.price if order.price else 0) }}</td>
+                    <td>
+                        {% set status_class = 'badge-pending' %}
+                        {% if order.status == 'In Progress' %}{% set status_class = 'badge-in-progress' %}{% endif %}
+                        {% if order.status == 'Ready' %}{% set status_class = 'badge-ready' %}{% endif %}
+                        {% if order.status == 'Delivered' %}{% set status_class = 'badge-delivered' %}{% endif %}
+                        {% if order.status == 'Cancelled' %}{% set status_class = 'badge-cancelled' %}{% endif %}
+                        <span class="badge {{ status_class }}">{{ order.status }}</span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">
+            <p>No activity records available yet.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

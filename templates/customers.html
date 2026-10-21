@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+
+{% block title %}کسٹمرز (Customers Directory) - Tailor Shop Management{% endblock %}
+
+{% block content %}
+<div dir="rtl" style="font-family: 'Noto Naskh Arabic', 'Noto Nastaliq Urdu', sans-serif;">
+    
+    <!-- Page Header -->
+    <div class="page-header" style="margin-bottom: 16px;">
+        <div>
+            <h1 class="page-title" style="font-size: 1.6rem; font-weight: 700;">کسٹمرز کی فہرست (Customers Directory)</h1>
+            <p class="page-subtitle" style="color: var(--text-muted); font-size: 0.9rem;">تمام رجسٹرڈ کسٹمرز اور ان کے سابقہ ناپ کی معلومات۔</p>
+        </div>
+    </div>
+
+    <!-- Flash Notifications -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="alerts-container">
+          {% for category, message in messages %}
+            <div class="desktop-alert alert-{{ category if category != 'error' else 'danger' }}" style="margin-bottom: 16px;">
+                <span>{{ message }}</span>
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <!-- Customers Table & Search Section -->
+    <div class="card-section">
+        <div class="section-header" style="flex-wrap: wrap; gap: 16px; margin-bottom: 16px;">
+            <h2 class="section-title" style="font-size: 1.1rem; font-weight: 700;">تمام کسٹمرز</h2>
+            
+            <!-- Search Filter Form -->
+            <form action="{{ url_for('customers') }}" method="GET" style="display: flex; gap: 8px;">
+                <input type="search" name="search" class="desktop-input" placeholder="نام، فون یا کسٹمر نمبر سے تلاش..." value="{{ search_query }}" style="width: 240px; height: 32px;">
+                <button type="submit" class="btn btn-secondary btn-sm" style="height: 32px;">تلاش</button>
+                {% if search_query %}
+                    <a href="{{ url_for('customers') }}" class="btn btn-secondary btn-sm" style="height: 32px; display: flex; align-items: center;">کلیئر</a>
+                {% endif %}
+            </form>
+        </div>
+
+        <div class="table-responsive">
+            {% if customers and customers|length > 0 %}
+            <table class="data-table" style="width: 100%; text-align: right;">
+                <thead>
+                    <tr style="background: #f1f5f9;">
+                        <th>کسٹمر نمبر</th>
+                        <th>نام</th>
+                        <th>فون نمبر</th>
+                        <th>پتہ</th>
+                        <th style="text-align: center;">ایکشن</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for customer in customers %}
+                    <tr>
+                        <td>
+                            <span class="green-number-box" style="font-size: 0.85rem; padding: 2px 8px;">
+                                {{ customer.customer_number if customer.customer_number else 'H' ~ loop.index }}
+                            </span>
+                        </td>
+                        <td>
+                            <a href="{{ url_for('customer_detail', customer_id=customer.id) }}" style="color: var(--primary-blue); font-weight: 700; text-decoration: none;">
+                                👤 {{ customer.name }}
+                            </a>
+                        </td>
+                        <td>{{ customer.phone if customer.phone else '—' }}</td>
+                        <td>{{ customer.address if customer.address else '—' }}</td>
+                        <td style="text-align: center;">
+                            <div class="actions-cell" style="justify-content: center; gap: 6px;">
+                                <!-- نیا آرڈر Button (Pre-filled for this customer) -->
+                                <a href="{{ url_for('new_order', customer_number=customer.customer_number or customer.id) }}" class="btn btn-primary btn-sm" title="اس کسٹمر کے لیے نیا آرڈر کھولیں">
+                                    📝 نیا آرڈر
+                                </a>
+
+                                <!-- دیکھیں Button -->
+                                <a href="{{ url_for('customer_detail', customer_id=customer.id) }}" class="btn btn-secondary btn-sm" title="کسٹمر ہسٹری اور سابقہ ناپ دیکھیں">
+                                    👁️ دیکھیں
+                                </a>
+
+                                <!-- حذف Button -->
+                                <form action="{{ url_for('delete_customer_route', customer_id=customer.id) }}" method="POST" onsubmit="return confirm('کیا آپ واقعتاً {{ customer.name }} کو حذف کرنا چاہتے ہیں؟');" style="display:inline;">
+                                    <button type="submit" class="btn btn-danger btn-sm" title="کسٹمر حذف کریں">
+                                        🗑️ حذف
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="empty-state" style="padding: 40px; text-align: center;">
+                <p style="font-size: 1.1rem;">کوئی کسٹمر نہیں ملا۔ نیا کسٹمر شامل کرنے کے لیے <strong>"📝 نیا آرڈر / ناپ فارم"</strong> کا بٹن دبائیں!</p>
+                <a href="{{ url_for('new_order') }}" class="btn btn-primary" style="margin-top: 12px;">📝 نیا آرڈر شامل کریں</a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+</div>
+{% endblock %}

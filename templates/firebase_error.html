@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Firebase Connection Warning - TailorCraft</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background-color: #f8fafc;
+        }
+        .error-card {
+            max-width: 540px;
+            background: #ffffff;
+            border-radius: 16px;
+            padding: 40px;
+            box-shadow: var(--shadow-lg);
+            border: 1px solid var(--border-color);
+            text-align: center;
+        }
+        .error-icon {
+            font-size: 3rem;
+            margin-bottom: 16px;
+        }
+    </style>
+</head>
+<body>
+    <div class="error-card">
+        <div class="error-icon">🔥⚠️</div>
+        <h1 style="font-size: 1.5rem; font-weight: 700; margin-bottom: 12px; color: #b91c1c;">
+            Firebase Connection Error
+        </h1>
+        <p style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 24px; line-height: 1.6;">
+            The app could not connect to Firebase Firestore. Please make sure <code>serviceAccountKey.json</code> is placed in your project root directory.
+        </p>
+
+        <div style="background-color: #fef2f2; border: 1px solid #fecaca; padding: 14px; border-radius: 8px; font-size: 0.85rem; color: #991b1b; text-align: left; margin-bottom: 24px;">
+            <strong>Error Details:</strong><br>
+            {{ error_message if error_message else "serviceAccountKey.json is missing or invalid." }}
+        </div>
+
+        <a href="{{ url_for('dashboard') }}" class="btn btn-primary">
+            🔄 Retry Connection
+        </a>
+    </div>
+</body>
+</html>

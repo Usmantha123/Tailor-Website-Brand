@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Tailor Shop Management{% endblock %}</title>
+    <!-- Google Fonts for modern typography and Urdu fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Naskh+Arabic:wght@400;500;600;700&family=Noto+Nastaliq+Urdu:wght@400;700&display=swap"
+        rel="stylesheet">
+    <!-- Main CSS stylesheet -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- ===================================================================
+             Left Sidebar Navigation
+             =================================================================== -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <a href="{{ url_for('dashboard') }}" class="brand-logo">
+                    <span class="brand-icon">🧵</span>
+                    <span>TS Brand Tailor</span>
+                </a>
+            </div>
+            <nav class="sidebar-nav">
+                <ul class="nav-list">
+                    <li class="nav-item">
+                        <a href="{{ url_for('dashboard') }}"
+                            class="{% if request.endpoint == 'dashboard' or request.endpoint == 'hello' %}active{% endif %}">
+                            <span class="nav-icon">📊</span>
+                            <span>ڈیش بورڈ (Dashboard)</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="{{ url_for('new_order') }}"
+                            class="{% if request.endpoint == 'new_order' %}active{% endif %}">
+                            <span class="nav-icon">📝</span>
+                            <span>نیا آرڈر / ناپ فارم</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="{{ url_for('orders') }}"
+                            class="{% if request.endpoint == 'orders' or request.endpoint == 'edit_order' %}active{% endif %}">
+                            <span class="nav-icon">✂️</span>
+                            <span>آرڈرز کی فہرست</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="{{ url_for('reports') }}"
+                            class="{% if request.endpoint == 'reports' %}active{% endif %}">
+                            <span class="nav-icon">📈</span>
+                            <span>رپورٹس (Reports)</span>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+        </aside>
+
+        <!-- ===================================================================
+             Main Content Area (Top Header + Page Body + Footer)
+             =================================================================== -->
+        <div class="main-wrapper">
+            <!-- Top Header Bar -->
+            <header class="top-header">
+                <div style="display: flex; align-items: center;">
+                    <button class="mobile-toggle" id="mobileToggleBtn" aria-label="Toggle Sidebar">☰</button>
+                    <!-- Active Search Form -->
+                    <form
+                        action="{% if request.endpoint == 'dashboard' or request.endpoint == 'hello' %}{{ url_for('dashboard') }}{% else %}{{ url_for('orders') }}{% endif %}"
+                        method="GET" class="header-search">
+                        <span class="search-icon">🔍</span>
+                        <input type="search" name="search" class="search-input"
+                            placeholder="Search orders, customers..."
+                            value="{{ search_query if search_query else request.args.get('search', '') }}"
+                            aria-label="Search">
+                    </form>
+                </div>
+
+                <!-- Right Header Actions (Language Toggle, Notification Icon, Admin Profile & Logout) -->
+                <div class="header-actions">
+                    <!-- RTL / Urdu Layout Toggle Switch -->
+                    <button class="btn btn-secondary btn-sm" id="langToggleBtn" onclick="toggleRtlLayout()"
+                        title="Switch layout direction (LTR/RTL)">
+                        🌐 <span id="langToggleText">Urdu RTL / اردو</span>
+                    </button>
+
+                    <!-- Notification Bell Icon -->
+                    <button class="notification-btn" aria-label="Notifications" title="Notifications">
+                        🔔
+                        <span class="notification-badge"></span>
+                    </button>
+
+                    <!-- Admin Profile Card -->
+                    <div class="user-profile">
+                        <div class="avatar">AT</div>
+                        <div class="user-info">
+                            <span class="user-name">Admin Tailor</span>
+                            <span class="user-role">Shop Manager</span>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Dynamic Page Body Content -->
+            <main class="page-body">
+                {% block content %}
+                {% endblock %}
+            </main>
+
+            <!-- App Footer -->
+            <footer class="app-footer">
+                <p>&copy; TS Brand Tailor • Simple & Efficient Shop Management</p>
+            </footer>
+        </div>
+    </div>
+
+    <!-- Main Client JavaScript -->
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+
+</html>

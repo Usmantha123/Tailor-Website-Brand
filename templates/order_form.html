@@ -1,0 +1,399 @@
+{% extends "base.html" %}
+
+{% block title %}آرڈر / ناپ فارم - TS Brand Tailor{% endblock %}
+
+{% block content %}
+<div class="desktop-form-wrapper" dir="rtl">
+
+    <!-- Form Top Bar: Main Title & Flash Notification Messages -->
+    <div class="desktop-form-header">
+        <h2 class="form-title">آرڈر / ناپ فارم</h2>
+        
+        <!-- Live Toast Notification Message Area -->
+        <div id="statusAlert" class="status-alert-box" style="display: none;"></div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="desktop-alert alert-{{ category if category != 'error' else 'danger' }}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+    </div>
+
+    <!-- Main Desktop Form -->
+    <form id="tailorForm" action="{{ url_for('save_order_form') }}" method="POST" autocomplete="off" onsubmit="return validateTailorForm()">
+        <input type="hidden" id="editing_order_id" name="editing_order_id" value="{{ order.id if order else '' }}">
+        
+        <!-- ===================================================================
+             TOP BAR (Search & Customer Info)
+             =================================================================== -->
+        <div class="top-bar-panel">
+            <input type="hidden" id="customer_number" name="customer_number" value="{{ customer_number if (customer or order) else '' }}">
+
+            <!-- Customer Details Row: Name, Phone, Address -->
+            <div class="customer-info-grid">
+                <div class="cust-field">
+                    <label for="name">نام <span class="required-star">*</span>:</label>
+                    <input type="text" id="name" name="name" class="desktop-input" 
+                           value="{{ customer.name if customer else '' }}" required>
+                </div>
+
+                <div class="cust-field">
+                    <label for="phone">فون نمبر <span class="required-star">*</span>:</label>
+                    <input type="text" id="phone" name="phone" class="desktop-input" 
+                           value="{{ customer.phone if customer else '' }}" required>
+                </div>
+
+                <div class="cust-field field-grow">
+                    <label for="address">پتہ:</label>
+                    <input type="text" id="address" name="address" class="desktop-input" 
+                           value="{{ customer.address if customer else '' }}">
+                </div>
+            </div>
+        </div>
+
+        <!-- ===================================================================
+             MAIN FORM GRID (3 COLUMNS RIGHT-TO-LEFT + CHECKBOXES PANEL)
+             =================================================================== -->
+        <div class="desktop-grid-container">
+
+            <!-- Column 1: قمیض (Shirt) -->
+            <div class="form-card-col">
+                <div class="card-header-banner">قمیض کا ناپ</div>
+                
+                <div class="inputs-stack">
+                    <div class="dense-input-row">
+                        <label for="shirt_length">لمبائی:</label>
+                        <input type="text" name="shirt_length" id="shirt_length" class="desktop-input num-field" 
+                               value="{{ measurements.shirt_length if measurements else '' }}">
+                    </div>
+
+                    <div class="dense-input-row">
+                        <label for="sleeve">آستین:</label>
+                        <input type="text" name="sleeve" id="sleeve" class="desktop-input num-field" 
+                               value="{{ measurements.sleeve if measurements else '' }}">
+                    </div>
+
+                    <div class="dense-input-row">
+                        <label for="shoulder">تیرا:</label>
+                        <input type="text" name="shoulder" id="shoulder" class="desktop-input num-field" 
+                               value="{{ measurements.shoulder if measurements else '' }}">
+                    </div>
+
+                    <div class="dense-input-row">
+                        <label for="collar_size">کالر سائز:</label>
+                        <input type="text" name="collar_size" id="collar_size" class="desktop-input num-field" 
+                               value="{{ measurements.collar_size if measurements else '' }}">
+                    </div>
+
+                    <div class="dense-input-row">
+                        <label for="chest">چھاتی:</label>
+                        <input type="text" name="chest" id="chest" class="desktop-input num-field" 
+                               value="{{ measurements.chest if measurements else '' }}">
+                    </div>
+
+                    <div class="dense-input-row">
+                        <label for="armpit">بغل:</label>
+                        <input type="text" name="armpit" id="armpit" class="desktop-input num-field" 
+                               value="{{ measurements.armpit if measurements else '' }}">
+                    </div>
+
+                    <div class="dense-input-row">
+                        <label for="daaman">دامن:</label>
+                        <input type="text" name="daaman" id="daaman" class="desktop-input num-field" 
+                               value="{{ measurements.daaman if measurements else '' }}">
+                    </div>
+                </div>
+
+                <!-- Radio Options: دامن گول / دامن سیدھا -->
+                <div class="daaman-radio-box">
+                    <label class="radio-option">
+                        <input type="radio" name="daaman_type" value="دامن گول" 
+                               {% if not measurements or measurements.daaman_type == 'دامن گول' %}checked{% endif %}>
+                        دامن گول
+                    </label>
+                    <label class="radio-option">
+                        <input type="radio" name="daaman_type" value="دامن سیدھا" 
+                               {% if measurements and measurements.daaman_type == 'دامن سیدھا' %}checked{% endif %}>
+                        دامن سیدھا
+                    </label>
+                </div>
+            </div>
+
+            <!-- Column 2: شلوار (Shalwar) -->
+            <div class="form-card-col">
+                <div class="card-header-banner">شلوار کا ناپ</div>
+
+                <div class="inputs-stack">
+                    <div class="dense-input-row">
+                        <label for="shalwar_length">لمبائی:</label>
+                        <input type="text" name="shalwar_length" id="shalwar_length" class="desktop-input num-field" 
+                               value="{{ measurements.shalwar_length if measurements else '' }}">
+                    </div>
+
+                    <div class="dense-input-row">
+                        <label for="paancha">پانچہ:</label>
+                        <input type="text" name="paancha" id="paancha" class="desktop-input num-field" 
+                               value="{{ measurements.paancha if measurements else '' }}">
+                    </div>
+
+                    <div class="dense-input-row">
+                        <label for="asan">آسن:</label>
+                        <input type="text" name="asan" id="asan" class="desktop-input num-field" 
+                               value="{{ measurements.asan if measurements else '' }}">
+                    </div>
+
+                    <div class="dense-input-row">
+                        <label for="shalwar_gheer">شلوار گھیر:</label>
+                        <input type="text" name="shalwar_gheer" id="shalwar_gheer" class="desktop-input num-field" 
+                               value="{{ measurements.shalwar_gheer if measurements else '' }}">
+                    </div>
+
+                    <div class="dense-input-row">
+                        <label for="chaak">چاک:</label>
+                        <input type="text" name="chaak" id="chaak" class="desktop-input num-field" 
+                               value="{{ measurements.chaak if measurements else '' }}">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Column 3: Dropdowns / Combo Options (<input list=""> + datalist) -->
+            <div class="form-card-col">
+                <div class="card-header-banner">ڈیزائن کی تفصیلات</div>
+
+                <div class="inputs-stack">
+                    <div class="dense-input-row">
+                        <label for="patti">پٹی:</label>
+                        <input list="list_patti" name="patti" id="patti" class="desktop-input" 
+                               value="{{ measurements.patti if measurements else '' }}">
+                        <datalist id="list_patti">
+                            <option value="سادہ پٹی">
+                            <option value="بٹن پٹی">
+                            <option value="زپ پٹی">
+                            <option value="بین پٹی">
+                        </datalist>
+                    </div>
+
+                    <div class="dense-input-row">
+                        <label for="patti_size">پٹی سائز:</label>
+                        <input list="list_patti_size" name="patti_size" id="patti_size" class="desktop-input" 
+                               value="{{ measurements.patti_size if measurements else '' }}">
+                        <datalist id="list_patti_size">
+                            <option value="1 انچ">
+                            <option value="1.25 انچ">
+                            <option value="1.5 انچ">
+                        </datalist>
+                    </div>
+
+                    <div class="dense-input-row">
+                        <label for="patti_length">پٹی لمبائی:</label>
+                        <input list="list_patti_length" name="patti_length" id="patti_length" class="desktop-input" 
+                               value="{{ measurements.patti_length if measurements else '' }}">
+                        <datalist id="list_patti_length">
+                            <option value="12 انچ">
+                            <option value="13 انچ">
+                            <option value="14 انچ">
+                        </datalist>
+                    </div>
+
+                    <div class="dense-input-row">
+                        <label for="paancha_patti">پانچہ پٹی:</label>
+                        <input list="list_paancha_patti" name="paancha_patti" id="paancha_patti" class="desktop-input" 
+                               value="{{ measurements.paancha_patti if measurements else '' }}">
+                        <datalist id="list_paancha_patti">
+                            <option value="سادہ">
+                            <option value="سلائی والی">
+                            <option value="بٹن والی">
+                        </datalist>
+                    </div>
+
+                    <div class="dense-input-row">
+                        <label for="stitching">سلائی:</label>
+                        <input list="list_stitching" name="stitching" id="stitching" class="desktop-input" 
+                               value="{{ measurements.stitching if measurements else '' }}">
+                        <datalist id="list_stitching">
+                            <option value="سنگل سلائی">
+                            <option value="ڈبل سلائی">
+                        </datalist>
+                    </div>
+
+                    <div class="dense-input-row">
+                        <label for="extra_1">اضافی نمبر 1:</label>
+                        <input list="list_extra_1" name="extra_1" id="extra_1" class="desktop-input" 
+                               value="{{ measurements.extra_1 if measurements else '' }}">
+                        <datalist id="list_extra_1">
+                            <option value="پیالہ شلوار">
+                            <option value="سادہ شلوار">
+                        </datalist>
+                    </div>
+
+                    <div class="dense-input-row">
+                        <label for="extra_2">اضافی نمبر 2:</label>
+                        <input type="text" name="extra_2" id="extra_2" class="desktop-input" 
+                               value="{{ measurements.extra_2 if measurements else '' }}">
+                    </div>
+
+                    <div class="dense-input-row">
+                        <label for="cuff_type">کف:</label>
+                        <input list="list_cuff_type" name="cuff_type" id="cuff_type" class="desktop-input" 
+                               value="{{ measurements.cuff_type if measurements else '' }}">
+                        <datalist id="list_cuff_type">
+                            <option value="کف گول">
+                            <option value="کف چوکور">
+                        </datalist>
+                    </div>
+
+                    <div class="dense-input-row">
+                        <label for="cuff_size">کف سائز:</label>
+                        <input list="list_cuff_size" name="cuff_size" id="cuff_size" class="desktop-input" 
+                               value="{{ measurements.cuff_size if measurements else '' }}">
+                        <datalist id="list_cuff_size">
+                            <option value="2.25 انچ">
+                            <option value="2.5 انچ">
+                            <option value="2.75 انچ">
+                        </datalist>
+                    </div>
+
+                    <div class="dense-input-row">
+                        <label for="collar_nok">کالر نوک:</label>
+                        <input list="list_collar_nok" name="collar_nok" id="collar_nok" class="desktop-input" 
+                               value="{{ measurements.collar_nok if measurements else '' }}">
+                        <datalist id="list_collar_nok">
+                            <option value="کالر 1">
+                            <option value="کالر 2">
+                            <option value="کالر 3">
+                        </datalist>
+                    </div>
+
+                    <div class="dense-input-row">
+                        <label for="moora">موڑہ:</label>
+                        <input type="text" name="moora" id="moora" class="desktop-input" 
+                               value="{{ measurements.moora if measurements else '' }}">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Column 4 / Left Panel: Checkboxes in Two Groups -->
+            <div class="form-card-col checkboxes-panel">
+                <div class="card-header-banner">اضافی خصوصیات</div>
+
+                <!-- Group A Checkboxes -->
+                <div class="checkbox-group-container">
+                    <div class="group-title-tag">گروپ (الف)</div>
+                    <label class="check-item"><input type="checkbox" name="baghair_plate" value="1" {% if measurements and measurements.baghair_plate %}checked{% endif %}> بغیر پلیٹ</label>
+                    <label class="check-item"><input type="checkbox" name="baghair_label" value="1" {% if measurements and measurements.baghair_label %}checked{% endif %}> بغیر لیبل</label>
+                    <label class="check-item"><input type="checkbox" name="chaak_patti_button" value="1" {% if measurements and measurements.chaak_patti_button %}checked{% endif %}> چاک پٹی بٹن</label>
+                    <label class="check-item"><input type="checkbox" name="chamak_taar" value="1" {% if measurements and measurements.chamak_taar %}checked{% endif %}> چمک تار</label>
+                    <label class="check-item"><input type="checkbox" name="steel_button" value="1" {% if measurements and measurements.steel_button %}checked{% endif %}> سٹیل بٹن</label>
+                </div>
+
+                <!-- Group B Checkboxes -->
+                <div class="checkbox-group-container">
+                    <div class="group-title-tag">گروپ (ب)</div>
+                    <label class="check-item"><input type="checkbox" name="front_pocket" value="1" {% if measurements and measurements.front_pocket %}checked{% endif %}> سامنے پاکٹ</label>
+                    <label class="check-item"><input type="checkbox" name="side_pocket_1" value="1" {% if measurements and measurements.side_pocket_1 %}checked{% endif %}> سائیڈ پاکٹ 1</label>
+                    <label class="check-item"><input type="checkbox" name="side_pocket_2" value="1" {% if measurements and measurements.side_pocket_2 %}checked{% endif %}> سائیڈ پاکٹ 2</label>
+                    <label class="check-item"><input type="checkbox" name="shalwar_pocket" value="1" {% if measurements and measurements.shalwar_pocket %}checked{% endif %}> شلوار پاکٹ</label>
+                    <label class="check-item"><input type="checkbox" name="front_pocket_kaaj" value="1" {% if measurements and measurements.front_pocket_kaaj %}checked{% endif %}> سامنے پاکٹ کاج</label>
+                    <label class="check-item"><input type="checkbox" name="cuff_1_kaaj" value="1" {% if measurements and measurements.cuff_1_kaaj %}checked{% endif %}> کف ایک کاج</label>
+                    <label class="check-item"><input type="checkbox" name="cuff_2_kaaj" value="1" {% if measurements and measurements.cuff_2_kaaj %}checked{% endif %}> کف دو کاج</label>
+                    <label class="check-item"><input type="checkbox" name="stud_kaaj" value="1" {% if measurements and measurements.stud_kaaj %}checked{% endif %}> سٹڈ کاج</label>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- ===================================================================
+             BOTTOM ACTION BUTTONS BAR
+             =================================================================== -->
+        <div class="bottom-buttons-bar">
+            <!-- Refresh (Resets Form) -->
+            <button type="button" class="btn-action btn-refresh-ui" onclick="refreshFormForNewCustomer()">
+                🔄 ریفریش
+            </button>
+
+            <!-- List (Goes to Orders List) -->
+            <a href="{{ url_for('orders') }}" class="btn-action btn-list-ui">
+                📋 لسٹ
+            </a>
+
+            <!-- Print Slip (Opens printable A5 modal) -->
+            <button type="button" class="btn-action btn-print-ui" onclick="openUrduPrintSlipModal()">
+                🖨️ پرچی نکالیں
+            </button>
+
+            <!-- Save (Submits Form) -->
+            <button type="submit" class="btn-action btn-save-ui">
+                💾 محفوظ کریں
+            </button>
+
+            <!-- Close (Goes to Dashboard) -->
+            <a href="{{ url_for('dashboard') }}" class="btn-action btn-close-ui">
+                ✖ ختم کریں
+            </a>
+        </div>
+
+    </form>
+
+    <!-- ===================================================================
+         PRINT SLIP MODAL (A5 Urdu Printable View)
+         =================================================================== -->
+    <div id="printSlipModal" class="modal-overlay-bg" style="display: none;">
+        <div class="printable-slip-card" id="printableA5Slip">
+            <div class="slip-header-title">
+                <h2>TS Brand Tailor - آرڈر / ناپ پرچی</h2>
+                <div class="slip-meta-info">
+                    <span>کسٹمر نمبر: <b id="slip_c_num">--</b></span> | 
+                    <span>تاریخ: <b id="slip_date">--</b></span>
+                </div>
+            </div>
+
+            <div class="slip-customer-row">
+                <div><b>نام:</b> <span id="slip_name">--</span></div>
+                <div><b>فون نمبر:</b> <span id="slip_phone">--</span></div>
+                <div><b>پتہ:</b> <span id="slip_address">--</span></div>
+            </div>
+
+            <div class="slip-grid-layout">
+                <!-- Shirt Section -->
+                <div class="slip-section-box">
+                    <h4>قمیض کا ناپ</h4>
+                    <table class="slip-table">
+                        <tr><td>لمبائی:</td><td id="slip_shirt_length">-</td><td>چھاتی:</td><td id="slip_chest">-</td></tr>
+                        <tr><td>آستین:</td><td id="slip_sleeve">-</td><td>بغل:</td><td id="slip_armpit">-</td></tr>
+                        <tr><td>تیرا:</td><td id="slip_shoulder">-</td><td>دامن:</td><td id="slip_daaman">-</td></tr>
+                        <tr><td>کالر:</td><td id="slip_collar_size">-</td><td>قسم:</td><td id="slip_daaman_type">-</td></tr>
+                    </table>
+                </div>
+
+                <!-- Shalwar Section -->
+                <div class="slip-section-box">
+                    <h4>شلوار کا ناپ</h4>
+                    <table class="slip-table">
+                        <tr><td>لمبائی:</td><td id="slip_shalwar_length">-</td><td>پانچہ:</td><td id="slip_paancha">-</td></tr>
+                        <tr><td>آسن:</td><td id="slip_asan">-</td><td>گھیر:</td><td id="slip_shalwar_gheer">-</td></tr>
+                        <tr><td>چاک:</td><td id="slip_chaak">-</td><td>-</td><td>-</td></tr>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Design Details Section -->
+            <div class="slip-section-box full-width-sec">
+                <h4>ڈیزائن اور انتخاب</h4>
+                <div class="slip-design-tags" id="slip_design_tags">
+                    <!-- Dynamic tags filled via JS -->
+                </div>
+            </div>
+
+            <div class="slip-actions no-print">
+                <button type="button" class="btn-action btn-print-ui" onclick="window.print()">پرنٹ کریں (Print)</button>
+                <button type="button" class="btn-action btn-close-ui" onclick="closeUrduPrintSlipModal()">بند کریں</button>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

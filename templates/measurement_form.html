@@ -1,0 +1,293 @@
+{% extends "base.html" %}
+
+{% block title %}
+  {% if measurement %}ناپ کی ترمیم (Edit Measurement) - Tailor Shop{% else %}ناپ لیں (Take Measurements) - Tailor Shop{% endif %}
+{% endblock %}
+
+{% block content %}
+<!-- Back to Customer Profile Navigation -->
+<div style="margin-bottom: 20px;">
+    <a href="{{ url_for('customer_detail', customer_id=customer.id) }}" class="btn btn-secondary btn-sm">
+        ⬅️ واپس کسٹمر پروفائل (Back to Customer Profile)
+    </a>
+</div>
+
+<!-- Page Header Card -->
+<div class="card-section" style="margin-bottom: 24px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+        <div>
+            <h1 class="page-title" style="font-size: 1.6rem;">
+                <span class="ur-text" lang="ur">{% if measurement %}ناپ کی ترمیم{% else %}ناپ لیں{% endif %}</span>
+                <span style="font-size: 1.1rem; color: var(--text-muted); font-weight: normal;">
+                    ({% if measurement %}Edit Measurement{% else %}Take Measurements{% endif %})
+                </span>
+            </h1>
+            <p class="page-subtitle">
+                👤 <strong>{{ customer.name }}</strong> &nbsp;•&nbsp; 📞 {{ customer.phone if customer.phone else 'N/A' }}
+            </p>
+        </div>
+
+        <div>
+            <span class="badge badge-in-progress" style="font-size: 0.9rem; padding: 8px 14px;">
+                📏 Customer ID: #CUST-00{{ customer.id }}
+            </span>
+        </div>
+    </div>
+</div>
+
+<!-- Measurement Form Section -->
+<div class="card-section">
+    <form action="{% if measurement %}{{ url_for('edit_measurement', measurement_id=measurement.id) }}{% else %}{{ url_for('new_measurement', customer_id=customer.id) }}{% endif %}" method="POST">
+
+        <!-- Basic Configuration: Garment Type, Unit, Fit, Date -->
+        <div class="form-section-title">
+            📋 <span class="ur-text" lang="ur">بنیادی معلومات</span> / Basic Information
+        </div>
+
+        <div class="form-grid-2" style="margin-bottom: 24px;">
+            <!-- Garment Type -->
+            <div class="form-group">
+                <label for="garment_type" class="form-label">
+                    <span class="ur-text" lang="ur">لباس کی قسم</span>
+                    <span class="en-subtext">Garment Type</span>
+                </label>
+                <select id="garment_type" name="garment_type" class="form-control" style="font-weight: 600;" required>
+                    <option value="Kameez" {% if measurement and measurement.garment_type == 'Kameez' %}selected{% endif %}>کرتا / قمیض شلوار (Kameez / Shalwar Kameez)</option>
+                    <option value="Shirt" {% if measurement and measurement.garment_type == 'Shirt' %}selected{% endif %}>قمیض (Shirt)</option>
+                    <option value="Trouser" {% if measurement and measurement.garment_type == 'Trouser' %}selected{% endif %}>شلوار / پتلون (Trouser / Shalwar)</option>
+                    <option value="Suit" {% if measurement and measurement.garment_type == 'Suit' %}selected{% endif %}>سوٹ (Suit)</option>
+                    <option value="Waistcoat" {% if measurement and measurement.garment_type == 'Waistcoat' %}selected{% endif %}>واسکٹ (Waistcoat)</option>
+                    <option value="Other" {% if measurement and measurement.garment_type == 'Other' %}selected{% endif %}>دیگر (Other Garment)</option>
+                </select>
+            </div>
+
+            <!-- Date Taken -->
+            <div class="form-group">
+                <label for="date_taken" class="form-label">
+                    <span class="ur-text" lang="ur">تاریخ</span>
+                    <span class="en-subtext">Date Taken</span>
+                </label>
+                <input type="date" id="date_taken" name="date_taken" class="form-control" value="{{ measurement.date_taken if measurement and measurement.date_taken else today_str }}" required>
+            </div>
+        </div>
+
+        <div class="form-grid-2" style="margin-bottom: 28px;">
+            <!-- Unit Toggle -->
+            <div class="form-group">
+                <label class="form-label">
+                    <span class="ur-text" lang="ur">یونٹ</span>
+                    <span class="en-subtext">Measurement Unit</span>
+                </label>
+                <div class="radio-tile-group">
+                    <label class="radio-tile-label">
+                        <input type="radio" name="unit" value="Inches" {% if not measurement or measurement.unit == 'Inches' %}checked{% endif %}>
+                        <div>
+                            <span class="ur-text" lang="ur" style="font-size: 1rem;">انچ</span>
+                            <span class="en-subtext">Inches (″)</span>
+                        </div>
+                    </label>
+                    <label class="radio-tile-label">
+                        <input type="radio" name="unit" value="cm" {% if measurement and measurement.unit == 'cm' %}checked{% endif %}>
+                        <div>
+                            <span class="ur-text" lang="ur" style="font-size: 1rem;">سینٹی میٹر</span>
+                            <span class="en-subtext">Centimeters (cm)</span>
+                        </div>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Fit Type -->
+            <div class="form-group">
+                <label class="form-label">
+                    <span class="ur-text" lang="ur">فٹنگ</span>
+                    <span class="en-subtext">Garment Fit</span>
+                </label>
+                <div class="radio-tile-group">
+                    <label class="radio-tile-label">
+                        <input type="radio" name="fit_type" value="Slim" {% if measurement and measurement.fit_type == 'Slim' %}checked{% endif %}>
+                        <div>
+                            <span class="ur-text" lang="ur" style="font-size: 1rem;">سلم</span>
+                            <span class="en-subtext">Slim Fit</span>
+                        </div>
+                    </label>
+                    <label class="radio-tile-label">
+                        <input type="radio" name="fit_type" value="Regular" {% if not measurement or measurement.fit_type == 'Regular' %}checked{% endif %}>
+                        <div>
+                            <span class="ur-text" lang="ur" style="font-size: 1rem;">عام</span>
+                            <span class="en-subtext">Regular Fit</span>
+                        </div>
+                    </label>
+                    <label class="radio-tile-label">
+                        <input type="radio" name="fit_type" value="Loose" {% if measurement and measurement.fit_type == 'Loose' %}checked{% endif %}>
+                        <div>
+                            <span class="ur-text" lang="ur" style="font-size: 1rem;">کھلا</span>
+                            <span class="en-subtext">Loose Fit</span>
+                        </div>
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <!-- Upper Body Section -->
+        <div id="upper-body-section" style="margin-bottom: 28px;">
+            <div class="form-section-title">
+                👔 <span class="ur-text" lang="ur">اوپری حصہ</span> / Upper Body Specs
+            </div>
+            <div class="form-grid-3">
+                <!-- Shirt/Kameez Length -->
+                <div class="form-group">
+                    <label for="shirt_length" class="form-label">
+                        <span class="ur-text" lang="ur">لمبائی</span>
+                        <span class="en-subtext">Shirt / Kameez Length</span>
+                    </label>
+                    <input type="number" step="0.25" id="shirt_length" name="shirt_length" class="form-control" value="{{ measurement.shirt_length if measurement and measurement.shirt_length is not none else '' }}" placeholder="e.g. 38.0">
+                </div>
+
+                <!-- Shoulder -->
+                <div class="form-group">
+                    <label for="shoulder" class="form-label">
+                        <span class="ur-text" lang="ur">تیرہ / کندھا</span>
+                        <span class="en-subtext">Shoulder Width</span>
+                    </label>
+                    <input type="number" step="0.25" id="shoulder" name="shoulder" class="form-control" value="{{ measurement.shoulder if measurement and measurement.shoulder is not none else '' }}" placeholder="e.g. 17.5">
+                </div>
+
+                <!-- Chest -->
+                <div class="form-group">
+                    <label for="chest" class="form-label">
+                        <span class="ur-text" lang="ur">چھاتی</span>
+                        <span class="en-subtext">Chest / Bust</span>
+                    </label>
+                    <input type="number" step="0.25" id="chest" name="chest" class="form-control" value="{{ measurement.chest if measurement and measurement.chest is not none else '' }}" placeholder="e.g. 40.0">
+                </div>
+
+                <!-- Waist -->
+                <div class="form-group">
+                    <label for="waist" class="form-label">
+                        <span class="ur-text" lang="ur">کمر</span>
+                        <span class="en-subtext">Upper Waist</span>
+                    </label>
+                    <input type="number" step="0.25" id="waist" name="waist" class="form-control" value="{{ measurement.waist if measurement and measurement.waist is not none else '' }}" placeholder="e.g. 34.0">
+                </div>
+
+                <!-- Sleeve length -->
+                <div class="form-group">
+                    <label for="sleeve" class="form-label">
+                        <span class="ur-text" lang="ur">آستین</span>
+                        <span class="en-subtext">Sleeve Length</span>
+                    </label>
+                    <input type="number" step="0.25" id="sleeve" name="sleeve" class="form-control" value="{{ measurement.sleeve if measurement and measurement.sleeve is not none else '' }}" placeholder="e.g. 24.5">
+                </div>
+
+                <!-- Cuff -->
+                <div class="form-group">
+                    <label for="cuff" class="form-label">
+                        <span class="ur-text" lang="ur">کف</span>
+                        <span class="en-subtext">Cuff Circumference</span>
+                    </label>
+                    <input type="number" step="0.25" id="cuff" name="cuff" class="form-control" value="{{ measurement.cuff if measurement and measurement.cuff is not none else '' }}" placeholder="e.g. 9.0">
+                </div>
+
+                <!-- Neck -->
+                <div class="form-group">
+                    <label for="neck" class="form-label">
+                        <span class="ur-text" lang="ur">گلا</span>
+                        <span class="en-subtext">Neck / Collar Size</span>
+                    </label>
+                    <input type="number" step="0.25" id="neck" name="neck" class="form-control" value="{{ measurement.neck if measurement and measurement.neck is not none else '' }}" placeholder="e.g. 15.5">
+                </div>
+            </div>
+        </div>
+
+        <!-- Lower Body Section -->
+        <div id="lower-body-section" style="margin-bottom: 28px;">
+            <div class="form-section-title">
+                👖 <span class="ur-text" lang="ur">نچلا حصہ</span> / Lower Body Specs
+            </div>
+            <div class="form-grid-3">
+                <!-- Trouser Length -->
+                <div class="form-group">
+                    <label for="trouser_length" class="form-label">
+                        <span class="ur-text" lang="ur">شلوار / پتلون کی لمبائی</span>
+                        <span class="en-subtext">Trouser / Shalwar Length</span>
+                    </label>
+                    <input type="number" step="0.25" id="trouser_length" name="trouser_length" class="form-control" value="{{ measurement.trouser_length if measurement and measurement.trouser_length is not none else '' }}" placeholder="e.g. 39.0">
+                </div>
+
+                <!-- Trouser Waist -->
+                <div class="form-group">
+                    <label for="trouser_waist" class="form-label">
+                        <span class="ur-text" lang="ur">کمر (نچلا حصہ)</span>
+                        <span class="en-subtext">Trouser Waist</span>
+                    </label>
+                    <input type="number" step="0.25" id="trouser_waist" name="trouser_waist" class="form-control" value="{{ measurement.trouser_waist if measurement and measurement.trouser_waist is not none else '' }}" placeholder="e.g. 32.0">
+                </div>
+
+                <!-- Hip -->
+                <div class="form-group">
+                    <label for="hip" class="form-label">
+                        <span class="ur-text" lang="ur">ہپ</span>
+                        <span class="en-subtext">Hip / Seat</span>
+                    </label>
+                    <input type="number" step="0.25" id="hip" name="hip" class="form-control" value="{{ measurement.hip if measurement and measurement.hip is not none else '' }}" placeholder="e.g. 40.0">
+                </div>
+
+                <!-- Thigh -->
+                <div class="form-group">
+                    <label for="thigh" class="form-label">
+                        <span class="ur-text" lang="ur">ران</span>
+                        <span class="en-subtext">Thigh Circumference</span>
+                    </label>
+                    <input type="number" step="0.25" id="thigh" name="thigh" class="form-control" value="{{ measurement.thigh if measurement and measurement.thigh is not none else '' }}" placeholder="e.g. 24.0">
+                </div>
+
+                <!-- Knee -->
+                <div class="form-group">
+                    <label for="knee" class="form-label">
+                        <span class="ur-text" lang="ur">گھٹنا</span>
+                        <span class="en-subtext">Knee Width</span>
+                    </label>
+                    <input type="number" step="0.25" id="knee" name="knee" class="form-control" value="{{ measurement.knee if measurement and measurement.knee is not none else '' }}" placeholder="e.g. 18.0">
+                </div>
+
+                <!-- Bottom / Paancha -->
+                <div class="form-group">
+                    <label for="bottom_paancha" class="form-label">
+                        <span class="ur-text" lang="ur">پائنچہ</span>
+                        <span class="en-subtext">Bottom / Paancha Opening</span>
+                    </label>
+                    <input type="number" step="0.25" id="bottom_paancha" name="bottom_paancha" class="form-control" value="{{ measurement.bottom_paancha if measurement and measurement.bottom_paancha is not none else '' }}" placeholder="e.g. 15.0">
+                </div>
+
+                <!-- Rise -->
+                <div class="form-group">
+                    <label for="rise" class="form-label">
+                        <span class="ur-text" lang="ur">رائز</span>
+                        <span class="en-subtext">Crotch Rise</span>
+                    </label>
+                    <input type="number" step="0.25" id="rise" name="rise" class="form-control" value="{{ measurement.rise if measurement and measurement.rise is not none else '' }}" placeholder="e.g. 11.5">
+                </div>
+            </div>
+        </div>
+
+        <!-- Notes -->
+        <div class="form-group" style="margin-bottom: 28px;">
+            <label for="notes" class="form-label">
+                <span class="ur-text" lang="ur">نوٹس / خصوصی ہدایات</span>
+                <span class="en-subtext">Additional Fitting & Tailoring Notes</span>
+            </label>
+            <textarea id="notes" name="notes" class="form-control" rows="3" placeholder="e.g. Double pocket, slim collar, 1 inch extra margin inside...">{{ measurement.notes if measurement and measurement.notes else '' }}</textarea>
+        </div>
+
+        <!-- Submit Button Action Footer -->
+        <div style="display: flex; justify-content: flex-end; gap: 14px; border-top: 1px solid var(--border-color); padding-top: 20px;">
+            <a href="{{ url_for('customer_detail', customer_id=customer.id) }}" class="btn btn-secondary">
+                منسوخ (Cancel)
+            </a>
+            <button type="submit" class="btn btn-primary" style="padding: 12px 28px; font-size: 1rem;">
+                💾 <span class="ur-text" lang="ur" style="color: white; font-size: 1.1rem;">ناپ محفوظ کریں</span> / Save Measurements
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
