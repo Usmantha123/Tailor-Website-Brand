@@ -300,6 +300,22 @@ def save_order_form():
         flash("گاہک کا نام درج کرنا لازمی ہے۔", "danger")
         return redirect(url_for("new_order", customer_number=customer_number))
 
+    # Step 1.1: Duplicate Name Check — Name must be unique!
+    name_clean = name.strip().lower()
+    all_existing_orders = firebase_db.get_all("orders")
+    duplicate_order = None
+    for o in all_existing_orders:
+        if editing_order_id and o.get("id") == editing_order_id:
+            continue
+        o_name = str(o.get("customer_name") or o.get("name") or "").strip().lower()
+        if o_name == name_clean:
+            duplicate_order = o
+            break
+
+    if duplicate_order:
+        flash(f"اس نام ({name}) کے ساتھ پہلے سے آرڈر #{duplicate_order.get('order_number','')} موجود ہے! ایک نام کے ساتھ دوسرا ریکارڈ محفوظ نہیں کیا جا سکتا۔", "danger")
+        return redirect(url_for("new_order", customer_number=customer_number, editing_order_id=editing_order_id))
+
     # Collect shirt, shalwar, dropdown options and checkboxes
     measurements_data = {
         # Shirt (قمیض)
@@ -494,6 +510,29 @@ def bulk_delete_orders_route():
 # ==============================================================================
 # Customer Data JSON API Endpoints for Form Interactivity & Live Search
 # ==============================================================================
+
+@app.route("/api/check-name-duplicate")
+def api_check_name_duplicate():
+    """Check if an order already exists with the given customer name."""
+    from flask import jsonify
+    name = request.args.get("name", "").strip().lower()
+    editing_order_id = request.args.get("editing_order_id", "").strip()
+    if not name:
+        return jsonify({"is_duplicate": False})
+
+    all_orders = firebase_db.get_all("orders")
+    for o in all_orders:
+        if editing_order_id and o.get("id") == editing_order_id:
+            continue
+        o_name = str(o.get("customer_name") or o.get("name") or "").strip().lower()
+        if o_name == name:
+            return jsonify({
+                "is_duplicate": True,
+                "order_number": o.get("order_number", ""),
+                "customer_name": o.get("customer_name", o.get("name", ""))
+            })
+
+    return jsonify({"is_duplicate": False})
 
 @app.route("/api/customer/by-number/<customer_number>")
 def api_get_customer_by_number(customer_number):

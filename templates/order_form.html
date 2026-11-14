@@ -60,14 +60,18 @@
 
             <!-- Row 1: Name (Mandatory), Phone (Optional), Address -->
             <div class="cust-row-grid">
-                <!-- Name: Mandatory with Live Search -->
+                <!-- Name: Mandatory with Live Search & Duplicate Warning -->
                 <div class="form-group autocomplete-wrapper" style="margin-bottom: 0;">
                     <label class="form-label" for="name">
                         گاہک کا نام <span class="required-star">* (لازمی)</span>
                     </label>
                     <input type="text" id="name" name="name" class="form-control"
                            value="{{ c.name if c.name else '' }}" placeholder="گاہک کا پورا نام درج کریں"
-                           oninput="onSearchQuery(this.value, 'nameSearchDropdown')" required>
+                           oninput="onSearchQuery(this.value, 'nameSearchDropdown'); checkDuplicateName(this.value);"
+                           onblur="checkDuplicateName(this.value);" required>
+                    <div id="duplicateNameWarning" style="display: none; color: var(--danger); font-size: 0.88rem; font-weight: 700; margin-top: 6px;">
+                        ❌ اس نام کے ساتھ پہلے سے آرڈر موجود ہے! ایک نام کا دوسرا ریکارڈ محفوظ نہیں ہو سکتا۔
+                    </div>
                     <div id="nameSearchDropdown" class="autocomplete-dropdown"></div>
                 </div>
 
@@ -400,11 +404,54 @@ function calculateBalance() {
 }
 calculateBalance();
 
-/* ----- Form Validation: NAME is mandatory, PHONE is optional ----- */
+/* ----- Duplicate Name Check ----- */
+let isNameDuplicate = false;
+let duplicateCheckTimer = null;
+
+function checkDuplicateName(val) {
+    clearTimeout(duplicateCheckTimer);
+    const name = (val || '').trim();
+    const editingId = document.querySelector('[name="editing_order_id"]')?.value || '';
+    const warningEl = document.getElementById('duplicateNameWarning');
+    const nameInput = document.getElementById('name');
+
+    if (!name) {
+        isNameDuplicate = false;
+        if (warningEl) warningEl.style.display = 'none';
+        if (nameInput) nameInput.style.borderColor = '';
+        return;
+    }
+
+    duplicateCheckTimer = setTimeout(() => {
+        fetch(`/api/check-name-duplicate?name=${encodeURIComponent(name)}&editing_order_id=${encodeURIComponent(editingId)}`)
+            .then(res => res.json())
+            .then(data => {
+                isNameDuplicate = data.is_duplicate;
+                if (isNameDuplicate) {
+                    if (warningEl) {
+                        warningEl.textContent = `❌ اس نام کے ساتھ پہلے سے آرڈر (#${data.order_number || ''}) موجود ہے! ایک نام کا دوسرا ریکارڈ محفوظ نہیں ہو سکتا۔`;
+                        warningEl.style.display = 'block';
+                    }
+                    if (nameInput) nameInput.style.borderColor = 'var(--danger)';
+                } else {
+                    if (warningEl) warningEl.style.display = 'none';
+                    if (nameInput) nameInput.style.borderColor = '';
+                }
+            })
+            .catch(() => {});
+    }, 250);
+}
+
+/* ----- Form Validation: NAME is mandatory, DUPLICATES blocked ----- */
 function validateForm() {
     const nameVal = document.getElementById('name').value.trim();
     if (!nameVal) {
         alert('براہ کرم گاہک کا نام لازمی درج کریں۔');
+        document.getElementById('name').focus();
+        return false;
+    }
+    if (isNameDuplicate) {
+        alert('اس نام کے ساتھ پہلے سے آرڈر موجود ہے! ایک نام سے دوسرا ریکارڈ محفوظ نہیں کیا جا سکتا۔ براہ کرم نام تبدیل کریں۔');
         document.getElementById('name').focus();
         return false;
     }
@@ -497,6 +544,9 @@ function selectCustomerByIndex(index, dropdownId) {
     // Show autofill success note
     const note = document.getElementById('autofillNote');
     if (note) note.style.display = 'block';
+
+    // Check duplicate name
+    checkDuplicateName(cust.name || '');
 
     // Hide all dropdowns
     closeAllDropdowns();
