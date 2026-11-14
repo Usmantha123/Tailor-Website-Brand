@@ -1,25 +1,30 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" dir="ltr" data-theme="light">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Tailor Shop Management{% endblock %}</title>
-    <!-- Google Fonts for modern typography and Urdu fonts -->
+    <title>{% block title %}TS Brand Tailor{% endblock %}</title>
+
+    <!-- Google Fonts: Inter for English UI & Numbers, Noto for Urdu -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Naskh+Arabic:wght@400;500;600;700&family=Noto+Nastaliq+Urdu:wght@400;700&display=swap"
-        rel="stylesheet">
-    <!-- Main CSS stylesheet -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Naskh+Arabic:wght@400;500;600;700&family=Noto+Nastaliq+Urdu:wght@400;700&display=swap" rel="stylesheet">
+
+    <!-- Main Stylesheet -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
+    {% block head %}{% endblock %}
 </head>
 
 <body>
+    <!-- Mobile sidebar overlay -->
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
     <div class="app-container">
-        <!-- ===================================================================
-             Left Sidebar Navigation
-             =================================================================== -->
+        <!-- ===================================================
+             LEFT SIDEBAR — English Navigation (3 items)
+             =================================================== -->
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-header">
                 <a href="{{ url_for('dashboard') }}" class="brand-logo">
@@ -27,100 +32,118 @@
                     <span>TS Brand Tailor</span>
                 </a>
             </div>
+
             <nav class="sidebar-nav">
                 <ul class="nav-list">
+                    <!-- 1. Today's Delivery (Home) -->
                     <li class="nav-item">
                         <a href="{{ url_for('dashboard') }}"
-                            class="{% if request.endpoint == 'dashboard' or request.endpoint == 'hello' %}active{% endif %}">
-                            <span class="nav-icon">📊</span>
-                            <span>ڈیش بورڈ (Dashboard)</span>
+                           class="{{ 'active' if request.endpoint in ['dashboard','hello'] else '' }}">
+                            <span class="nav-icon">📦</span>
+                            <span>Today's Delivery</span>
                         </a>
                     </li>
+
+                    <!-- 2. New Order -->
                     <li class="nav-item">
                         <a href="{{ url_for('new_order') }}"
-                            class="{% if request.endpoint == 'new_order' %}active{% endif %}">
+                           class="{{ 'active' if request.endpoint in ['new_order','edit_order'] else '' }}">
                             <span class="nav-icon">📝</span>
-                            <span>نیا آرڈر / ناپ فارم</span>
+                            <span>New Order</span>
                         </a>
                     </li>
+
+                    <!-- 3. Orders List -->
                     <li class="nav-item">
                         <a href="{{ url_for('orders') }}"
-                            class="{% if request.endpoint == 'orders' or request.endpoint == 'edit_order' %}active{% endif %}">
+                           class="{{ 'active' if request.endpoint == 'orders' else '' }}">
                             <span class="nav-icon">✂️</span>
-                            <span>آرڈرز کی فہرست</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="{{ url_for('reports') }}"
-                            class="{% if request.endpoint == 'reports' %}active{% endif %}">
-                            <span class="nav-icon">📈</span>
-                            <span>رپورٹس (Reports)</span>
+                            <span>Orders</span>
                         </a>
                     </li>
                 </ul>
             </nav>
+
+            <!-- Sidebar footer with theme toggle -->
+            <div class="sidebar-footer">
+                <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn">
+                    🌙 Dark Mode
+                </button>
+            </div>
         </aside>
 
-        <!-- ===================================================================
-             Main Content Area (Top Header + Page Body + Footer)
-             =================================================================== -->
+        <!-- ===================================================
+             MAIN CONTENT WRAPPER
+             =================================================== -->
         <div class="main-wrapper">
-            <!-- Top Header Bar -->
-            <header class="top-header">
-                <div style="display: flex; align-items: center;">
-                    <button class="mobile-toggle" id="mobileToggleBtn" aria-label="Toggle Sidebar">☰</button>
-                    <!-- Active Search Form -->
-                    <form
-                        action="{% if request.endpoint == 'dashboard' or request.endpoint == 'hello' %}{{ url_for('dashboard') }}{% else %}{{ url_for('orders') }}{% endif %}"
-                        method="GET" class="header-search">
-                        <span class="search-icon">🔍</span>
-                        <input type="search" name="search" class="search-input"
-                            placeholder="Search orders, customers..."
-                            value="{{ search_query if search_query else request.args.get('search', '') }}"
-                            aria-label="Search">
-                    </form>
-                </div>
 
-                <!-- Right Header Actions (Language Toggle, Notification Icon, Admin Profile & Logout) -->
-                <div class="header-actions">
-                    <!-- RTL / Urdu Layout Toggle Switch -->
-                    <button class="btn btn-secondary btn-sm" id="langToggleBtn" onclick="toggleRtlLayout()"
-                        title="Switch layout direction (LTR/RTL)">
-                        🌐 <span id="langToggleText">Urdu RTL / اردو</span>
-                    </button>
+            <!-- Top Header -->
+            <header class="top-header no-print">
+                <button class="mobile-toggle" id="mobileToggleBtn"
+                        aria-label="Toggle Navigation" onclick="toggleSidebar()">☰</button>
 
-                    <!-- Notification Bell Icon -->
-                    <button class="notification-btn" aria-label="Notifications" title="Notifications">
-                        🔔
-                        <span class="notification-badge"></span>
-                    </button>
-
-                    <!-- Admin Profile Card -->
-                    <div class="user-profile">
-                        <div class="avatar">AT</div>
-                        <div class="user-info">
-                            <span class="user-name">Admin Tailor</span>
-                            <span class="user-role">Shop Manager</span>
-                        </div>
-                    </div>
-                </div>
+                <span class="header-title">{% block header_title %}TS Brand Tailor{% endblock %}</span>
             </header>
 
-            <!-- Dynamic Page Body Content -->
+            <!-- Global Flash Messages -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            <div style="padding: 18px 28px 0;">
+                {% for category, message in messages %}
+                <div class="alert alert-{{ 'danger' if category == 'error' else category }}" id="flashMsg">
+                    {% if category == 'success' %}✅{% elif category == 'danger' %}❌{% elif category == 'warning' %}⚠️{% else %}ℹ️{% endif %}
+                    <span>{{ message }}</span>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+            {% endwith %}
+
+            <!-- Dynamic Page Content -->
             <main class="page-body">
-                {% block content %}
-                {% endblock %}
+                {% block content %}{% endblock %}
             </main>
 
-            <!-- App Footer -->
-            <footer class="app-footer">
-                <p>&copy; TS Brand Tailor • Simple & Efficient Shop Management</p>
+            <footer class="app-footer no-print">
+                &copy; TS Brand Tailor &bull; Simple &amp; Efficient Tailor Shop Management
             </footer>
         </div>
     </div>
 
-    <!-- Main Client JavaScript -->
-    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
-</body>
+    <!-- Shared Client JS -->
+    <script>
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('open');
+            document.getElementById('sidebarOverlay').classList.toggle('open');
+        }
+        function closeSidebar() {
+            document.getElementById('sidebar').classList.remove('open');
+            document.getElementById('sidebarOverlay').classList.remove('open');
+        }
 
+        function applyTheme(theme) {
+            document.documentElement.setAttribute('data-theme', theme);
+            localStorage.setItem('ts_theme', theme);
+            const btn = document.getElementById('themeBtn');
+            if (btn) {
+                btn.textContent = theme === 'dark' ? '☀️ Light Mode' : '🌙 Dark Mode';
+            }
+        }
+        function toggleTheme() {
+            const current = document.documentElement.getAttribute('data-theme');
+            applyTheme(current === 'dark' ? 'light' : 'dark');
+        }
+        (function() {
+            const saved = localStorage.getItem('ts_theme');
+            if (saved) applyTheme(saved);
+        })();
+
+        setTimeout(function() {
+            const msg = document.getElementById('flashMsg');
+            if (msg) msg.style.display = 'none';
+        }, 4000);
+    </script>
+
+    {% block scripts %}{% endblock %}
+</body>
 </html>

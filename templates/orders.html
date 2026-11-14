@@ -1,407 +1,331 @@
 {% extends "base.html" %}
-
-{% block title %}آرڈر کی فہرست (Orders List) - Tailor Shop Management{% endblock %}
+{% block title %}Orders — TS Brand Tailor{% endblock %}
+{% block header_title %}Orders Record{% endblock %}
 
 {% block content %}
-<div dir="rtl" style="font-family: 'Noto Naskh Arabic', 'Noto Nastaliq Urdu', sans-serif;">
-    
-    <!-- Page Header -->
-    <div class="page-header" style="margin-bottom: 16px;">
-        <div>
-            <h1 class="page-title" style="font-size: 1.6rem; font-weight: 700;">آرڈر کی فہرست (Orders List)</h1>
-            <p class="page-subtitle" style="color: var(--text-muted); font-size: 0.9rem;">تمام کسٹمرز کے جاری اور مکمل شدہ آرڈرز کی تفصیلی لسٹ۔</p>
-        </div>
-        <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-            {% if orders and orders|length > 0 %}
-            <button type="button" class="btn btn-danger" onclick="openDeleteAllModal()" style="font-weight: 700; display: inline-flex; align-items: center; gap: 6px;">
-                🗑️ تمام آرڈرز حذف کریں (Delete All)
-            </button>
-            {% endif %}
-            <a href="{{ url_for('new_order') }}" class="btn btn-primary" style="font-weight: 700; display: inline-flex; align-items: center; gap: 6px;">
-                📝 نیا آرڈر / ناپ فارم
-            </a>
-        </div>
+
+<!-- Page Header -->
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Orders</h1>
+        <p class="page-subtitle">Track, update and manage all tailor shop orders</p>
     </div>
-
-    <!-- Flash Notifications -->
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}
-        <div class="alerts-container">
-          {% for category, message in messages %}
-            <div id="flashAlert" class="desktop-alert alert-{{ category if category != 'error' else 'danger' }}" style="margin-bottom: 16px;">
-                <span>{{ message }}</span>
-            </div>
-          {% endfor %}
-        </div>
-        <script>
-            setTimeout(() => {
-                const fa = document.getElementById('flashAlert');
-                if (fa) fa.style.display = 'none';
-            }, 3000);
-        </script>
-      {% endif %}
-    {% endwith %}
-
-    <!-- Orders Table & Filter Section -->
-    <div class="card-section">
-        
-        <!-- Status Filter Buttons Bar -->
-        <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--border-color);">
-            <a href="{{ url_for('orders', status='All', search=search_query) }}" class="btn btn-sm {% if current_status == 'All' %}btn-primary{% else %}btn-secondary{% endif %}">
-                سب (All)
-            </a>
-            <a href="{{ url_for('orders', status='زیر تکمیل', search=search_query) }}" class="btn btn-sm {% if current_status == 'زیر تکمیل' or current_status == 'In Progress' %}btn-primary{% else %}btn-secondary{% endif %}">
-                ⏳ زیر تکمیل (In Progress)
-            </a>
-            <a href="{{ url_for('orders', status='تیار', search=search_query) }}" class="btn btn-sm {% if current_status == 'تیار' or current_status == 'Ready' %}btn-primary{% else %}btn-secondary{% endif %}">
-                🚚 تیار (Ready)
-            </a>
-            <a href="{{ url_for('orders', status='ترسیل شدہ', search=search_query) }}" class="btn btn-sm {% if current_status == 'ترسیل شدہ' or current_status == 'Delivered' %}btn-primary{% else %}btn-secondary{% endif %}">
-                ✅ ترسیل شدہ (Delivered)
-            </a>
-        </div>
-
-        <!-- Search Box Header -->
-        <div class="section-header" style="flex-wrap: wrap; gap: 16px; margin-bottom: 16px;">
-            <h2 class="section-title" style="font-size: 1.1rem; font-weight: 700;">
-                {% if current_status != 'All' %}آرڈرز بحالت "{{ current_status }}"{% else %}تمام آرڈرز کا ریکارڈ{% endif %}
-            </h2>
-
-            <form action="{{ url_for('orders') }}" method="GET" style="display: flex; gap: 8px;">
-                <input type="hidden" name="status" value="{{ current_status }}">
-                <input type="search" name="search" class="desktop-input" placeholder="نام، فون، یا آرڈر نمبر سے تلاش..." value="{{ search_query }}" style="width: 240px; height: 32px;">
-                <button type="submit" class="btn btn-secondary btn-sm" style="height: 32px;">تلاش</button>
-                {% if search_query %}
-                    <a href="{{ url_for('orders', status=current_status) }}" class="btn btn-secondary btn-sm" style="height: 32px; display: flex; align-items: center;">کلیئر</a>
-                {% endif %}
-            </form>
-        </div>
-
-        <!-- Bulk Selection Alert Bar -->
-        <div id="bulkActionsBar" style="display: none; background: #fee2e2; border: 1px solid #f87171; border-radius: 8px; padding: 10px 16px; margin-bottom: 16px; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
-            <div style="display: flex; align-items: center; gap: 8px; color: #991b1b; font-weight: 700; font-size: 0.95rem;">
-                <span>⚠️ <span id="selectedCount">0</span> آرڈر منتخب کیے گئے ہیں۔</span>
-            </div>
-            <div style="display: flex; gap: 8px; align-items: center;">
-                <button type="button" class="btn btn-danger btn-sm" onclick="confirmDeleteSelected()" style="font-weight: 700;">
-                    🗑️ منتخب کردہ حذف کریں (Delete Selected)
-                </button>
-                <button type="button" class="btn btn-secondary btn-sm" onclick="clearAllSelections()" style="font-weight: 600;">
-                    سلیکشن ختم کریں
-                </button>
-            </div>
-        </div>
-
-        <!-- Hidden Form for Bulk Delete -->
-        <form id="bulkDeleteForm" action="{{ url_for('bulk_delete_orders_route') }}" method="POST" style="display: none;"></form>
-
-        <!-- Data Table -->
-        <div class="table-responsive">
-            {% if orders and orders|length > 0 %}
-            <table class="data-table" style="width: 100%; text-align: right;">
-                <thead>
-                    <tr style="background: #f1f5f9;">
-                        <th style="width: 44px; text-align: center;">
-                            <input type="checkbox" id="selectAllCheckbox" onchange="toggleSelectAll(this)" title="سب منتخب کریں (Select All)" style="width: 17px; height: 17px; cursor: pointer;">
-                        </th>
-                        <th>آرڈر نمبر</th>
-                        <th>کسٹمر نمبر</th>
-                        <th>نام</th>
-                        <th>فون</th>
-                        <th>تاریخ</th>
-                        <th>حالت</th>
-                        <th style="text-align: center;">ایکشن</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for order in orders %}
-                    <tr id="row-{{ order.id }}">
-                        <td style="text-align: center;">
-                            <input type="checkbox" value="{{ order.id }}" class="order-checkbox" onchange="updateSelectionBar()" style="width: 17px; height: 17px; cursor: pointer;">
-                        </td>
-                        <td><strong>{{ order.order_number if order.order_number else 'ORD-' ~ loop.index }}</strong></td>
-                        <td>
-                            <span class="green-number-box" style="font-size: 0.85rem; padding: 2px 8px;">
-                                {{ order.customer_number if order.customer_number else 'H100' }}
-                            </span>
-                        </td>
-                        <td>
-                            <strong>{{ order.customer_name if order.customer_name else '—' }}</strong>
-                            {% if order.address %}
-                                <div style="font-size: 0.78rem; color: var(--text-muted);">{{ order.address }}</div>
-                            {% endif %}
-                        </td>
-                        <td>{{ order.customer_phone if order.customer_phone else '—' }}</td>
-                        <td>{{ order.order_date if order.order_date else order.created_at[:10] }}</td>
-                        <td>
-                            {% set status_text = order.status if order.status else 'زیر تکمیل' %}
-                            {% set status_class = 'badge-in-progress' %}
-                            {% if status_text == 'تیار' or status_text == 'Ready' %}{% set status_class = 'badge-ready' %}{% endif %}
-                            {% if status_text == 'ترسیل شدہ' or status_text == 'Delivered' %}{% set status_class = 'badge-delivered' %}{% endif %}
-                            
-                            <!-- Form to quickly update status -->
-                            <form action="{{ url_for('update_order_status', order_id=order.id) }}" method="POST" style="display: inline;">
-                                <select name="status" onchange="this.form.submit()" class="badge {{ status_class }}" style="border: none; cursor: pointer; font-family: inherit;">
-                                    <option value="زیر تکمیل" {% if status_text == 'زیر تکمیل' or status_text == 'In Progress' or status_text == 'Pending' %}selected{% endif %}>⏳ زیر تکمیل</option>
-                                    <option value="تیار" {% if status_text == 'تیار' or status_text == 'Ready' %}selected{% endif %}>🚚 تیار</option>
-                                    <option value="ترسیل شدہ" {% if status_text == 'ترسیل شدہ' or status_text == 'Delivered' %}selected{% endif %}>✅ ترسیل شدہ</option>
-                                </select>
-                            </form>
-                        </td>
-                        <td style="text-align: center;">
-                            <div class="actions-cell" style="justify-content: center; gap: 6px;">
-                                <!-- دیکھیں Button -->
-                                <a href="{{ url_for('view_order', order_id=order.id) }}" class="btn btn-primary btn-sm" title="آرڈر کی تفصیلات دیکھیں">
-                                    👁️ دیکھیں
-                                </a>
-
-                                <!-- ایڈٹ Button -->
-                                <a href="{{ url_for('edit_order', order_id=order.id) }}" class="btn btn-secondary btn-sm" title="آرڈر میں ترمیم کریں">
-                                    ✏️ ایڈٹ
-                                </a>
-
-                                <!-- پرچی Button -->
-                                <button type="button" class="btn btn-info btn-sm" onclick="openOrderSlipModal('{{ order.id }}')" title="آرڈر پرچی دیکھیں / پرنٹ کریں">
-                                    🖨️ پرچی
-                                </button>
-
-                                <!-- حذف Button -->
-                                <form action="{{ url_for('delete_order_route', order_id=order.id) }}" method="POST" onsubmit="return confirm('کیا آپ واقعتاً اس آرڈر کو حذف کرنا چاہتے ہیں؟');" style="display:inline;">
-                                    <button type="submit" class="btn btn-danger btn-sm" title="آرڈر حذف کریں">
-                                        🗑️ حذف
-                                    </button>
-                                </form>
-                            </div>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-            {% else %}
-            <div class="empty-state" style="padding: 40px; text-align: center;">
-                <p style="font-size: 1.1rem;">کوئی آرڈر نہیں ملا۔ نیا آرڈر شامل کرنے کے لیے <strong>"📝 نیا آرڈر / ناپ فارم"</strong> کا بٹن دبائیں!</p>
-                <a href="{{ url_for('new_order') }}" class="btn btn-primary" style="margin-top: 12px;">📝 نیا آرڈر شامل کریں</a>
-            </div>
-            {% endif %}
-        </div>
-    </div>
-
-    <!-- Hidden Store of Orders for Slip Modal -->
-    <script>
-        const ordersData = {
-            {% for order in orders %}
-                "{{ order.id }}": {{ order|tojson|safe }},
-            {% endfor %}
-        };
-
-        function openOrderSlipModal(orderId) {
-            const o = ordersData[orderId];
-            if (!o) return;
-
-            const m = o.measurements || {};
-            document.getElementById('slip_c_num').textContent = o.customer_number || '--';
-            document.getElementById('slip_date').textContent = o.order_date || '--';
-            document.getElementById('slip_name').textContent = o.customer_name || '--';
-            document.getElementById('slip_phone').textContent = o.customer_phone || '--';
-            document.getElementById('slip_address').textContent = o.address || '--';
-
-            document.getElementById('slip_shirt_length').textContent = m.shirt_length || '-';
-            document.getElementById('slip_sleeve').textContent = m.sleeve || '-';
-            document.getElementById('slip_shoulder').textContent = m.shoulder || '-';
-            document.getElementById('slip_collar_size').textContent = m.collar_size || '-';
-            document.getElementById('slip_chest').textContent = m.chest || '-';
-            document.getElementById('slip_armpit').textContent = m.armpit || '-';
-            document.getElementById('slip_daaman').textContent = m.daaman || '-';
-            document.getElementById('slip_daaman_type').textContent = m.daaman_type || '-';
-
-            document.getElementById('slip_shalwar_length').textContent = m.shalwar_length || '-';
-            document.getElementById('slip_paancha').textContent = m.paancha || '-';
-            document.getElementById('slip_asan').textContent = m.asan || '-';
-            document.getElementById('slip_shalwar_gheer').textContent = m.shalwar_gheer || '-';
-            document.getElementById('slip_chaak').textContent = m.chaak || '-';
-
-            let tagsHtml = '';
-            const dropdowns = ['patti', 'stitching', 'cuff_type', 'collar_nok', 'extra_1', 'extra_2'];
-            dropdowns.forEach(f => {
-                if (m[f]) tagsHtml += `<span class="tag-badge">${m[f]}</span>`;
-            });
-            const checkLabels = {
-                'baghair_plate': 'بغیر پلیٹ', 'baghair_label': 'بغیر لیبل', 'chaak_patti_button': 'چاک پٹی بٹن',
-                'chamak_taar': 'چمک تار', 'steel_button': 'سٹیل بٹن', 'front_pocket': 'سامنے پاکٹ',
-                'side_pocket_1': 'سائیڈ پاکٹ 1', 'side_pocket_2': 'سائیڈ پاکٹ 2', 'shalwar_pocket': 'شلوار پاکٹ',
-                'front_pocket_kaaj': 'سامنے پاکٹ کاج', 'cuff_1_kaaj': 'کف ایک کاج', 'cuff_2_kaaj': 'کف دو کاج', 'stud_kaaj': 'سٹڈ کاج'
-            };
-            Object.keys(checkLabels).forEach(key => {
-                if (m[key]) tagsHtml += `<span class="tag-badge">${checkLabels[key]}</span>`;
-            });
-
-            document.getElementById('slip_design_tags').innerHTML = tagsHtml || '<span>عام انداز</span>';
-            document.getElementById('printSlipModal').style.display = 'flex';
-        }
-
-        function closeOrderSlipModal() {
-            document.getElementById('printSlipModal').style.display = 'none';
-        }
-
-        function openDeleteAllModal() {
-            const m = document.getElementById('deleteAllModal');
-            if (m) m.style.display = 'flex';
-        }
-
-        function closeDeleteAllModal() {
-            const m = document.getElementById('deleteAllModal');
-            if (m) m.style.display = 'none';
-        }
-
-        function toggleSelectAll(masterCheckbox) {
-            const checkboxes = document.querySelectorAll('.order-checkbox');
-            checkboxes.forEach(cb => {
-                cb.checked = masterCheckbox.checked;
-            });
-            updateSelectionBar();
-        }
-
-        function updateSelectionBar() {
-            const checkboxes = document.querySelectorAll('.order-checkbox');
-            const checked = document.querySelectorAll('.order-checkbox:checked');
-            const bar = document.getElementById('bulkActionsBar');
-            const countSpan = document.getElementById('selectedCount');
-            const masterCheckbox = document.getElementById('selectAllCheckbox');
-
-            if (checked.length > 0) {
-                if (bar) bar.style.display = 'flex';
-                if (countSpan) countSpan.textContent = checked.length;
-            } else {
-                if (bar) bar.style.display = 'none';
-            }
-
-            if (masterCheckbox) {
-                masterCheckbox.checked = checkboxes.length > 0 && checked.length === checkboxes.length;
-                masterCheckbox.indeterminate = checked.length > 0 && checked.length < checkboxes.length;
-            }
-        }
-
-        function clearAllSelections() {
-            const checkboxes = document.querySelectorAll('.order-checkbox');
-            checkboxes.forEach(cb => {
-                cb.checked = false;
-            });
-            const masterCheckbox = document.getElementById('selectAllCheckbox');
-            if (masterCheckbox) {
-                masterCheckbox.checked = false;
-                masterCheckbox.indeterminate = false;
-            }
-            updateSelectionBar();
-        }
-
-        function confirmDeleteSelected() {
-            const checked = document.querySelectorAll('.order-checkbox:checked');
-            if (checked.length === 0) return;
-
-            if (confirm(`کیا آپ واقعی منتخب کردہ ${checked.length} آرڈرز حذف کرنا چاہتے ہیں؟`)) {
-                const form = document.getElementById('bulkDeleteForm');
-                form.innerHTML = '';
-                checked.forEach(cb => {
-                    const input = document.createElement('input');
-                    input.type = 'hidden';
-                    input.name = 'order_ids';
-                    input.value = cb.value;
-                    form.appendChild(input);
-                });
-                form.submit();
-            }
-        }
-
-        window.addEventListener('click', function(event) {
-            const modal = document.getElementById('deleteAllModal');
-            if (modal && event.target === modal) {
-                closeDeleteAllModal();
-            }
-        });
-    </script>
-
-    <!-- Modal Slip Overlay -->
-    <div id="printSlipModal" class="modal-overlay-bg" style="display: none;">
-        <div class="printable-slip-card" id="printableA5Slip">
-            <div class="slip-header-title">
-                <h2>TS Brand Tailor - آرڈر / ناپ پرچی</h2>
-                <div class="slip-meta-info">
-                    <span>کسٹمر نمبر: <b id="slip_c_num">--</b></span> | 
-                    <span>تاریخ: <b id="slip_date">--</b></span>
-                </div>
-            </div>
-
-            <div class="slip-customer-row">
-                <div><b>نام:</b> <span id="slip_name">--</span></div>
-                <div><b>فون نمبر:</b> <span id="slip_phone">--</span></div>
-                <div><b>پتہ:</b> <span id="slip_address">--</span></div>
-            </div>
-
-            <div class="slip-grid-layout">
-                <div class="slip-section-box">
-                    <h4>قمیض کا ناپ</h4>
-                    <table class="slip-table">
-                        <tr><td>لمبائی:</td><td id="slip_shirt_length">-</td><td>چھاتی:</td><td id="slip_chest">-</td></tr>
-                        <tr><td>آستین:</td><td id="slip_sleeve">-</td><td>بغل:</td><td id="slip_armpit">-</td></tr>
-                        <tr><td>تیرا:</td><td id="slip_shoulder">-</td><td>دامن:</td><td id="slip_daaman">-</td></tr>
-                        <tr><td>کالر:</td><td id="slip_collar_size">-</td><td>قسم:</td><td id="slip_daaman_type">-</td></tr>
-                    </table>
-                </div>
-
-                <div class="slip-section-box">
-                    <h4>شلوار کا ناپ</h4>
-                    <table class="slip-table">
-                        <tr><td>لمبائی:</td><td id="slip_shalwar_length">-</td><td>پانچہ:</td><td id="slip_paancha">-</td></tr>
-                        <tr><td>آسن:</td><td id="slip_asan">-</td><td>گھیر:</td><td id="slip_shalwar_gheer">-</td></tr>
-                        <tr><td>چاک:</td><td id="slip_chaak">-</td><td>-</td><td>-</td></tr>
-                    </table>
-                </div>
-            </div>
-
-            <div class="slip-section-box full-width-sec">
-                <h4>ڈیزائن اور انتخاب</h4>
-                <div class="slip-design-tags" id="slip_design_tags"></div>
-            </div>
-
-            <div class="slip-actions no-print">
-                <button type="button" class="btn-action btn-print-ui" onclick="window.print()">پرنٹ کریں (Print)</button>
-                <button type="button" class="btn-action btn-close-ui" onclick="closeOrderSlipModal()">بند کریں</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Delete All Confirmation Modal -->
-    <div id="deleteAllModal" class="modal-overlay-bg" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.6); z-index: 99999; justify-content: center; align-items: center; backdrop-filter: blur(2px);">
-        <div style="background: #ffffff; border-radius: 14px; max-width: 480px; width: 92%; padding: 28px 24px; box-shadow: 0 20px 45px rgba(0,0,0,0.3); text-align: center; direction: rtl;">
-            <div style="width: 64px; height: 64px; line-height: 64px; border-radius: 50%; background: #fee2e2; color: #dc2626; font-size: 30px; margin: 0 auto 16px auto; display: flex; align-items: center; justify-content: center;">
-                🗑️
-            </div>
-            <h3 style="font-size: 1.4rem; font-weight: 700; color: #1e293b; margin-bottom: 10px;">
-                تمام آرڈرز حذف کریں؟
-            </h3>
-            <p style="color: #64748b; font-size: 0.95rem; margin-bottom: 20px; line-height: 1.6;">
-                کیا آپ واقعی ڈیٹا بیس سے <strong style="color: #dc2626;">تمام آرڈرز کا ریکارڈ</strong> مکمل طور پر حذف کرنا چاہتے ہیں؟ یہ عمل واپس نہیں ہو سکے گا۔
-            </p>
-
-            <form action="{{ url_for('delete_all_orders_route') }}" method="POST">
-                <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 14px; margin-bottom: 24px; text-align: right; display: flex; align-items: center; gap: 10px;">
-                    <input type="checkbox" name="reset_counter" id="reset_counter" value="1" checked style="cursor: pointer; width: 18px; height: 18px;">
-                    <label for="reset_counter" style="margin: 0; cursor: pointer; font-size: 0.9rem; color: #334155; font-weight: 600;">
-                        آرڈر نمبر کاؤنٹر بھی ری سیٹ کریں (ORD-0001 سے شروع ہو گا)
-                    </label>
-                </div>
-
-                <div style="display: flex; justify-content: center; gap: 12px; flex-wrap: wrap;">
-                    <button type="submit" class="btn btn-danger" style="padding: 10px 22px; font-weight: 700; font-size: 0.95rem;">
-                        🗑️ جی ہاں، تمام آرڈرز حذف کریں
-                    </button>
-                    <button type="button" class="btn btn-secondary" onclick="closeDeleteAllModal()" style="padding: 10px 22px; font-weight: 600; font-size: 0.95rem;">
-                        منسوخ کریں
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-
+    <a href="{{ url_for('new_order') }}" class="btn btn-primary">📝 + New Order</a>
 </div>
+
+<!-- Search Bar -->
+<form action="{{ url_for('orders') }}" method="GET" class="search-bar" id="searchForm">
+    <input type="hidden" name="status" value="{{ current_status }}">
+    <input type="search" name="search" class="search-input"
+           placeholder="Search by customer name, phone, or order ID..."
+           value="{{ search_query }}">
+    <button type="submit" class="btn btn-primary">🔍 Search</button>
+    {% if search_query %}
+    <a href="{{ url_for('orders', status=current_status) }}" class="btn btn-secondary">✕ Clear</a>
+    {% endif %}
+</form>
+
+<!-- Filter Chips -->
+<div class="filter-chips">
+    <a href="{{ url_for('orders', search=search_query) }}"
+       class="chip {{ 'active' if current_status in ['All',''] else '' }}">All Orders</a>
+    <a href="{{ url_for('orders', status='زیر تکمیل', search=search_query) }}"
+       class="chip {{ 'active' if current_status == 'زیر تکمیل' else '' }}">⏳ In Progress</a>
+    <a href="{{ url_for('orders', status='تیار', search=search_query) }}"
+       class="chip {{ 'active' if current_status == 'تیار' else '' }}">✅ Ready</a>
+    <a href="{{ url_for('orders', status='ترسیل شدہ', search=search_query) }}"
+       class="chip {{ 'active' if current_status == 'ترسیل شدہ' else '' }}">🚚 Delivered</a>
+</div>
+
+<!-- Orders Table -->
+<div class="card-section">
+    {% if orders %}
+    <div class="table-responsive">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Customer Name</th>
+                    <th>Order No / Phone</th>
+                    <th>Status</th>
+                    <th>Delivery Date</th>
+                    <th style="text-align:center;">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for order in orders %}
+                {% set s = order.status or 'زیر تکمیل' %}
+                <tr id="row-{{ order.id }}">
+                    <!-- Customer Name & Address -->
+                    <td>
+                        <div style="font-weight:700; color:var(--text-main);">{{ order.customer_name or '—' }}</div>
+                        {% if order.address %}
+                        <div style="font-size:.82rem; color:var(--text-muted);">{{ order.address }}</div>
+                        {% endif %}
+                    </td>
+
+                    <!-- Order ID + Phone -->
+                    <td>
+                        <div class="num" style="font-weight:700; font-size:.92rem; color:var(--primary);">
+                            {{ order.order_number or ('ORD-' ~ loop.index) }}
+                        </div>
+                        <div class="phone-num" style="font-size:.85rem; color:var(--text-muted);">
+                            {{ order.customer_phone or '—' }}
+                        </div>
+                    </td>
+
+                    <!-- Status Dropdown — Instant fetch/POST -->
+                    <td>
+                        <select class="status-select"
+                                onchange="updateStatus('{{ order.id }}', this.value, this)"
+                                data-orig="{{ s }}">
+                            <option value="زیر تکمیل" {{ 'selected' if s in ['زیر تکمیل','In Progress','Pending'] }}>⏳ In Progress</option>
+                            <option value="تیار"      {{ 'selected' if s in ['تیار','Ready'] }}>✅ Ready</option>
+                            <option value="ترسیل شدہ"  {{ 'selected' if s in ['ترسیل شدہ','Delivered'] }}>🚚 Delivered</option>
+                        </select>
+                    </td>
+
+                    <!-- Delivery Date -->
+                    <td>
+                        {% if order.due_date %}
+                        <span class="num" style="font-weight:600;">{{ order.due_date }}</span>
+                        {% else %}
+                        <span style="color:var(--text-muted);">—</span>
+                        {% endif %}
+                    </td>
+
+                    <!-- Action: Single "Open" button -->
+                    <td style="text-align:center;">
+                        <button class="btn btn-primary btn-sm"
+                                onclick="openDialog('{{ order.id }}')">
+                            Open
+                        </button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div style="text-align:center; padding:45px 0; color:var(--text-muted);">
+        <div style="font-size:2.8rem; margin-bottom:12px;">📋</div>
+        <p style="font-size:1.05rem; font-weight:500;">No orders found matching your criteria.</p>
+        <a href="{{ url_for('new_order') }}" class="btn btn-primary" style="margin-top:16px;">
+            📝 Create New Order
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+<!-- ===================================================
+     ORDER DETAILS MODAL (English)
+     =================================================== -->
+<div class="dialog-overlay" id="orderDialog">
+    <div class="dialog">
+        <div class="dialog-header">
+            <span class="dialog-title" id="dlg_title">Order Details</span>
+            <button class="dialog-close" onclick="closeDialog()">✕</button>
+        </div>
+
+        <!-- Financial Summary -->
+        <div style="background:var(--bg-main); border:1px solid var(--border-color); border-radius:var(--border-radius-sm); padding:12px 18px; margin-bottom:18px;">
+            <div class="info-row">
+                <span class="info-label">Total Price:</span>
+                <span class="info-value price-val" id="dlg_price" style="color:var(--primary); font-size:1.1rem;">—</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Advance Paid:</span>
+                <span class="info-value price-val" id="dlg_advance" style="color:var(--warning); font-size:1.1rem;">—</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Remaining Balance:</span>
+                <span class="info-value price-val" id="dlg_balance" style="color:var(--danger); font-size:1.15rem; font-weight:800;">—</span>
+            </div>
+        </div>
+
+        <!-- Measurements Breakdown -->
+        <details open style="margin-bottom:14px;">
+            <summary style="font-size:1rem; color:var(--primary); cursor:pointer; padding:6px 0; font-weight:700;">
+                Measurements &amp; Specifications (ناپ کی تفصیل)
+            </summary>
+            <div style="margin-top:12px;">
+                <!-- Shirt -->
+                <div class="slip-col-title">Kameez / Shirt (قمیض)</div>
+                <div id="dlg_shirt" style="display:grid; grid-template-columns:1fr 1fr; gap:4px 16px;"></div>
+                <!-- Shalwar -->
+                <div class="slip-col-title" style="margin-top:12px;">Shalwar / Trouser (شلوار)</div>
+                <div id="dlg_shalwar" style="display:grid; grid-template-columns:1fr 1fr; gap:4px 16px;"></div>
+                <!-- Design -->
+                <div class="slip-col-title" style="margin-top:12px;">Design &amp; Custom Features (ڈیزائن)</div>
+                <div id="dlg_design" class="checked-list" style="margin-top:6px;"></div>
+            </div>
+        </details>
+
+        <!-- Actions Toolbar -->
+        <div class="dialog-actions">
+            <!-- WhatsApp -->
+            <a id="dlg_whatsapp" href="#" target="_blank" class="btn btn-success">
+                📱 WhatsApp
+            </a>
+            <!-- Print Slip -->
+            <a id="dlg_slip" href="#" class="btn btn-secondary">
+                🖨️ Print Slip
+            </a>
+            <!-- Edit -->
+            <a id="dlg_edit" href="#" class="btn btn-secondary">
+                ✏️ Edit Order
+            </a>
+            <!-- Delete -->
+            <button class="btn btn-danger" onclick="confirmDelete()" id="dlg_delete_btn">
+                🗑️ Delete
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Single Delete Hidden Form -->
+<form id="deleteForm" method="POST" style="display:none;"></form>
+
+<script>
+const ORDERS = {
+    {% for o in orders %}
+    "{{ o.id }}": {{ o | tojson | safe }},
+    {% endfor %}
+};
+
+const SHIRT_FIELDS = [
+    ['shirt_length', 'Length / لمبائی'],
+    ['sleeve', 'Sleeve / آستین'],
+    ['shoulder', 'Shoulder / تیرا'],
+    ['collar_size', 'Collar / کالر'],
+    ['chest', 'Chest / چھاتی'],
+    ['armpit', 'Armpit / بغل'],
+    ['daaman', 'Daaman / دامن'],
+    ['daaman_type', 'Daaman Type / قسم']
+];
+
+const SHALWAR_FIELDS = [
+    ['shalwar_length', 'Length / لمبائی'],
+    ['paancha', 'Paancha / پانچہ'],
+    ['asan', 'Asan / آسن'],
+    ['shalwar_gheer', 'Gheer / گھیر'],
+    ['chaak', 'Chaak / چاک']
+];
+
+const DESIGN_FIELDS = [
+    ['patti', 'Patti / پٹی'],
+    ['patti_size', 'Patti Size / سائز'],
+    ['patti_length', 'Patti Length / لمبائی'],
+    ['paancha_patti', 'Paancha Patti / پانچہ پٹی'],
+    ['stitching', 'Stitching / سلائی'],
+    ['cuff_type', 'Cuff / کف'],
+    ['cuff_size', 'Cuff Size / سائز'],
+    ['collar_nok', 'Collar Nok / نوک'],
+    ['moora', 'Moora / موڑہ'],
+    ['extra_1', 'Extra 1 / اضافی ۱'],
+    ['extra_2', 'Extra 2 / اضافی ۲']
+];
+
+const CHECK_LABELS = {
+    baghair_plate: 'بغیر پلیٹ (No Pleats)',
+    baghair_label: 'بغیر لیبل (No Label)',
+    chaak_patti_button: 'چاک پٹی بٹن',
+    chamak_taar: 'چمک تار',
+    steel_button: 'سٹیل بٹن',
+    front_pocket: 'سامنے پاکٹ (Front Pocket)',
+    side_pocket_1: 'سائیڈ پاکٹ ۱ (Side Pocket 1)',
+    side_pocket_2: 'سائیڈ پاکٹ ۲ (Side Pocket 2)',
+    shalwar_pocket: 'شلوار پاکٹ (Shalwar Pocket)',
+    front_pocket_kaaj: 'سامنے پاکٹ کاج',
+    cuff_1_kaaj: 'کف ایک کاج',
+    cuff_2_kaaj: 'کف دو کاج',
+    stud_kaaj: 'سٹڈ کاج'
+};
+
+let currentOrderId = null;
+
+function openDialog(orderId) {
+    currentOrderId = orderId;
+    const o = ORDERS[orderId];
+    if (!o) return;
+
+    const m = o.measurements || {};
+    const name = o.customer_name || o.name || '—';
+    const phone = (o.customer_phone || o.phone || '').replace(/^0/, '');
+
+    document.getElementById('dlg_title').textContent = `${name} — #${o.order_number || ''}`;
+
+    const price = parseFloat(o.price || 0);
+    const advance = parseFloat(o.advance || 0);
+    const balance = price - advance;
+
+    document.getElementById('dlg_price').textContent = 'Rs. ' + price.toFixed(0);
+    document.getElementById('dlg_advance').textContent = 'Rs. ' + advance.toFixed(0);
+    document.getElementById('dlg_balance').textContent = 'Rs. ' + balance.toFixed(0);
+
+    document.getElementById('dlg_shirt').innerHTML = SHIRT_FIELDS.map(([k, l]) =>
+        m[k] ? `<div class="slip-row"><span>${l}</span><span>${m[k]}</span></div>` : ''
+    ).join('') || '<div style="color:var(--text-muted);">None</div>';
+
+    document.getElementById('dlg_shalwar').innerHTML = SHALWAR_FIELDS.map(([k, l]) =>
+        m[k] ? `<div class="slip-row"><span>${l}</span><span>${m[k]}</span></div>` : ''
+    ).join('') || '<div style="color:var(--text-muted);">None</div>';
+
+    let designHtml = DESIGN_FIELDS
+        .filter(([k]) => m[k])
+        .map(([k, l]) => `<span class="checked-tag">${l}: ${m[k]}</span>`)
+        .join('');
+
+    Object.keys(CHECK_LABELS).forEach(k => {
+        if (m[k] === true || m[k] === 'true') {
+            designHtml += `<span class="checked-tag">✓ ${CHECK_LABELS[k]}</span>`;
+        }
+    });
+
+    document.getElementById('dlg_design').innerHTML = designHtml || '<span style="color:var(--text-muted)">Standard stitch</span>';
+
+    const msg = encodeURIComponent(`السلام علیکم ${name}، آپ کا سوٹ تیار ہے۔ ٹی ایس برانڈ ٹیلر`);
+    document.getElementById('dlg_whatsapp').href = `https://wa.me/92${phone}?text=${msg}`;
+
+    document.getElementById('dlg_slip').href = `/orders/${orderId}`;
+    document.getElementById('dlg_edit').href = `/orders/${orderId}/edit`;
+
+    document.getElementById('orderDialog').classList.add('open');
+}
+
+function closeDialog() {
+    document.getElementById('orderDialog').classList.remove('open');
+    currentOrderId = null;
+}
+
+document.getElementById('orderDialog').addEventListener('click', function(e) {
+    if (e.target === this) closeDialog();
+});
+
+function confirmDelete() {
+    if (!currentOrderId) return;
+    if (!confirm('Are you sure you want to delete this order? This action cannot be undone.')) return;
+    const form = document.getElementById('deleteForm');
+    form.action = `/orders/${currentOrderId}/delete`;
+    closeDialog();
+    form.submit();
+}
+
+function updateStatus(orderId, newStatus, selectEl) {
+    const orig = selectEl.dataset.orig;
+    const formData = new FormData();
+    formData.append('status', newStatus);
+
+    fetch(`/orders/${orderId}/status`, { method: 'POST', body: formData })
+        .then(r => {
+            if (r.ok) {
+                selectEl.dataset.orig = newStatus;
+                selectEl.style.borderColor = 'var(--success)';
+                setTimeout(() => { selectEl.style.borderColor = ''; }, 1500);
+            } else {
+                selectEl.value = orig;
+            }
+        })
+        .catch(() => { selectEl.value = orig; });
+}
+</script>
 {% endblock %}

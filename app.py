@@ -58,11 +58,41 @@ def firebase_error():
 
 @app.route("/")
 def dashboard():
-    """Main dashboard showing key statistics and recent orders from Firestore."""
-    search_query = request.args.get("search", "").strip()
-    stats = firebase_db.get_dashboard_stats()
-    recent_orders = firebase_db.search_collection("orders", search_query)[:5]
-    return render_template("dashboard.html", stats=stats, recent_orders=recent_orders, search_query=search_query)
+    """Home: آج کی ڈیلیوری — orders due today or overdue that are not delivered."""
+    today_str = datetime.now().strftime("%Y-%m-%d")
+    this_month = datetime.now().strftime("%Y-%m")
+
+    all_orders = firebase_db.get_all("orders")
+
+    # Orders due today or earlier that are NOT delivered
+    pending_delivery = []
+    for o in all_orders:
+        due = str(o.get("due_date", "") or "").strip()
+        status = str(o.get("status", "") or "").strip()
+        if due and due <= today_str and status not in ["ترسیل شدہ", "Delivered"]:
+            o["is_overdue"] = due < today_str
+            pending_delivery.append(o)
+
+    # Sort: overdue first, then by due date
+    pending_delivery.sort(key=lambda o: o.get("due_date", ""))
+
+    # Count cards
+    in_progress_count = sum(1 for o in all_orders if o.get("status") in ["زیر تکمیل", "In Progress"])
+    ready_count       = sum(1 for o in all_orders if o.get("status") in ["تیار", "Ready"])
+    delivered_month   = sum(
+        1 for o in all_orders
+        if o.get("status") in ["ترسیل شدہ", "Delivered"]
+        and str(o.get("order_date") or o.get("created_at") or "")[:7] == this_month
+    )
+
+    return render_template(
+        "dashboard.html",
+        pending_delivery=pending_delivery,
+        in_progress_count=in_progress_count,
+        ready_count=ready_count,
+        delivered_month=delivered_month,
+        today_str=today_str
+    )
 
 @app.route("/hello")
 def hello():
@@ -259,10 +289,13 @@ def save_order_form():
     address = request.form.get("address", "").strip()
     customer_number = request.form.get("customer_number", "").strip()
     editing_order_id = request.form.get("editing_order_id", "").strip()
+    due_date = request.form.get("due_date", "").strip()
+    price = parse_float(request.form.get("price", "0"))
+    advance = parse_float(request.form.get("advance", "0"))
 
-    # Step 1: Validation - Name and Phone are required
-    if not name or not phone:
-        flash("نام اور فون نمبر درج کرنا لازمی ہے۔", "danger")
+    # Step 1: Validation - Name is required (Phone is optional)
+    if not name:
+        flash("گاہک کا نام درج کرنا لازمی ہے۔", "danger")
         return redirect(url_for("new_order", customer_number=customer_number))
 
     # Collect shirt, shalwar, dropdown options and checkboxes
@@ -311,10 +344,17 @@ def save_order_form():
         "stud_kaaj": True if request.form.get("stud_kaaj") else False,
     }
 
-    # Step 2: Customer Lookup — check phone FIRST (same person = same customer)
-    existing_customer = firebase_db.get_customer_by_phone(phone)
+    # Step 2: Customer Lookup — check phone if provided, then customer_number, then name
+    existing_customer = None
+    if phone:
+        existing_customer = firebase_db.get_customer_by_phone(phone)
     if not existing_customer and customer_number:
         existing_customer = firebase_db.get_customer_by_number(customer_number)
+    if not existing_customer and not phone and name:
+        for c in firebase_db.get_all("customers"):
+            if str(c.get("name", "")).strip().lower() == name.lower():
+                existing_customer = c
+                break
 
     if existing_customer:
         # Reuse existing customer and update details + latest measurements
@@ -349,6 +389,9 @@ def save_order_form():
             "customer_name": name,
             "customer_phone": phone,
             "address": address,
+            "due_date": due_date,
+            "price": price,
+            "advance": advance,
             "measurements": measurements_data,
             "updated_at": datetime.now().isoformat()
         })
@@ -362,14 +405,27 @@ def save_order_form():
             "customer_name": name,
             "customer_phone": phone,
             "address": address,
+            "due_date": due_date,
+            "price": price,
+            "advance": advance,
             "order_date": datetime.now().strftime("%Y-%m-%d"),
             "status": "زیر تکمیل",  # Default status: In Progress
             "measurements": measurements_data,
             "created_at": datetime.now().isoformat()
         })
 
-    # Step 5: Show green "محفوظ ہو گیا" and redirect to Orders List (/orders)
+    # Step 5: Show green "محفوظ ہو گیا" and redirect
     flash("محفوظ ہو گیا", "success")
+    # If "پرچی نکالیں" was clicked, redirect to the slip page
+    if request.form.get("_print") == "1" and not editing_order_id:
+        # We need the order id — find latest order for this customer
+        try:
+            recent = firebase_db.get_all("orders", order_by_field="created_at", descending=True)
+            for o in recent:
+                if o.get("customer_phone") == phone:
+                    return redirect(url_for("view_order", order_id=o["id"]))
+        except Exception:
+            pass
     return redirect(url_for("orders"))
 
 @app.route("/orders/<order_id>")
@@ -390,13 +446,14 @@ def edit_order(order_id):
 
 @app.route("/orders/<order_id>/status", methods=["POST"])
 def update_order_status(order_id):
-    """Update status of an order."""
+    """Update status of an order. Returns JSON so AJAX fetch works."""
+    from flask import jsonify
     new_status = request.form.get("status", "زیر تکمیل").strip()
     order = firebase_db.get_document("orders", order_id)
     if order:
         firebase_db.update_document("orders", order_id, {"status": new_status})
-        flash("آرڈر کی حالت تبدیل ہو گئی۔", "success")
-    return redirect(url_for("orders"))
+        return jsonify({"ok": True})
+    return jsonify({"ok": False}), 404
 
 @app.route("/orders/<order_id>/delete", methods=["POST"])
 def delete_order_route(order_id):
@@ -465,12 +522,31 @@ def api_customers_live_search():
     formatted = []
     for c in results:
         formatted.append({
+            "id": c.get("id", ""),
             "customer_number": c.get("customer_number", c.get("id", "")),
             "name": c.get("name", ""),
             "phone": c.get("phone", ""),
-            "address": c.get("address", "")
+            "address": c.get("address", ""),
+            "measurements": c.get("measurements", {})
         })
     return jsonify(formatted)
+
+@app.route("/api/customer/by-name/<path:name>")
+def api_get_customer_by_name(name):
+    """Return customer data + measurements by exact name."""
+    from flask import jsonify
+    name_clean = str(name).strip().lower()
+    for c in firebase_db.get_all("customers"):
+        if str(c.get("name", "")).strip().lower() == name_clean:
+            return jsonify({
+                "found": True,
+                "name": c.get("name", ""),
+                "phone": c.get("phone", ""),
+                "address": c.get("address", ""),
+                "customer_number": c.get("customer_number", ""),
+                "measurements": c.get("measurements", {})
+            })
+    return jsonify({"found": False}), 404
 
 @app.route("/api/customer/next-number")
 def api_next_customer_number():
@@ -478,6 +554,21 @@ def api_next_customer_number():
     from flask import jsonify
     next_num = firebase_db.generate_customer_number()
     return jsonify({"customer_number": next_num})
+
+@app.route("/api/customer/by-phone/<path:phone>")
+def api_get_customer_by_phone(phone):
+    """Return customer data + measurements by phone number (for wizard auto-fill)."""
+    from flask import jsonify
+    cust = firebase_db.get_customer_by_phone(phone)
+    if not cust:
+        return jsonify({"found": False}), 404
+    return jsonify({
+        "found": True,
+        "name": cust.get("name", ""),
+        "address": cust.get("address", ""),
+        "customer_number": cust.get("customer_number", ""),
+        "measurements": cust.get("measurements", {})
+    })
 
 # ==============================================================================
 # Reports & Analytics Route

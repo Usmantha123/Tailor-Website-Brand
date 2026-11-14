@@ -1,117 +1,96 @@
 {% extends "base.html" %}
-
-{% block title %}Dashboard - Tailor Shop Management{% endblock %}
+{% block title %}Today's Delivery — TS Brand Tailor{% endblock %}
+{% block header_title %}Today's Delivery{% endblock %}
 
 {% block content %}
-<!-- Page Header -->
-<div class="page-header">
-    <div>
-        <h1 class="page-title">Shop Dashboard</h1>
-        <p class="page-subtitle">Welcome back! Here is a quick summary of your shop's operations.</p>
-    </div>
-</div>
 
-<!-- 3 Key Stat Cards Grid -->
+<!-- 3 Stat Cards -->
 <div class="stats-grid">
-    <!-- Stat 1: Total Customers -->
+    <!-- In Progress -->
     <div class="stat-card">
         <div class="stat-info">
-            <span class="stat-label">Total Customers</span>
-            <span class="stat-value">{{ stats.total_customers }}</span>
+            <span class="stat-label">In Progress</span>
+            <span class="stat-value">{{ in_progress_count }}</span>
         </div>
-        <div class="stat-icon-wrapper icon-blue">
-            👥
-        </div>
+        <div class="stat-icon-wrapper icon-amber">⏳</div>
     </div>
 
-    <!-- Stat 2: Pending Orders -->
+    <!-- Ready -->
     <div class="stat-card">
         <div class="stat-info">
-            <span class="stat-label">Pending Orders</span>
-            <span class="stat-value">{{ stats.pending_orders }}</span>
+            <span class="stat-label">Ready</span>
+            <span class="stat-value">{{ ready_count }}</span>
         </div>
-        <div class="stat-icon-wrapper icon-amber">
-            ⏳
-        </div>
+        <div class="stat-icon-wrapper icon-blue">✅</div>
     </div>
 
-    <!-- Stat 3: Ready for Delivery -->
+    <!-- Delivered this month -->
     <div class="stat-card">
         <div class="stat-info">
-            <span class="stat-label">Ready for Delivery</span>
-            <span class="stat-value">{{ stats.ready_orders }}</span>
+            <span class="stat-label">Delivered (This Month)</span>
+            <span class="stat-value">{{ delivered_month }}</span>
         </div>
-        <div class="stat-icon-wrapper icon-purple">
-            🚚
-        </div>
+        <div class="stat-icon-wrapper icon-green">🚚</div>
     </div>
 </div>
 
-<!-- Recent Orders Table Section -->
+<!-- Today's & Overdue Deliveries Section -->
 <div class="card-section">
-    <div class="section-header" style="flex-wrap: wrap; gap: 12px;">
-        <h2 class="section-title">
-            {% if search_query %}
-                Search Results for "{{ search_query }}"
-            {% else %}
-                Recent Orders
-            {% endif %}
-        </h2>
-        
-        <div>
-            {% if search_query %}
-                <a href="{{ url_for('dashboard') }}" class="btn btn-secondary btn-sm">Clear Search</a>
-            {% endif %}
-            <a href="{{ url_for('orders') }}" class="btn btn-secondary btn-sm">View All Orders</a>
-        </div>
-    </div>
-
-    <div class="table-responsive">
-        {% if recent_orders and recent_orders|length > 0 %}
-        <table class="data-table">
-            <thead>
-                <tr>
-                    <th>Order ID</th>
-                    <th>Customer Name</th>
-                    <th>Item Description</th>
-                    <th>Due Date</th>
-                    <th>Price</th>
-                    <th>Status</th>
-                    <th>Action</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for order in recent_orders %}
-                <tr>
-                    <td><strong>#ORD-{{ order.id[:6]|upper }}</strong></td>
-                    <td>
-                        <a href="{{ url_for('customer_detail', customer_id=order.customer_id) }}" style="color: var(--primary-blue); font-weight: 600; text-decoration: none;">
-                            👤 {{ order.customer_name }}
-                        </a>
-                    </td>
-                    <td>{{ order.item }}</td>
-                    <td>{{ order.due_date if order.due_date else 'N/A' }}</td>
-                    <td>${{ "%.2f"|format(order.price if order.price else 0) }}</td>
-                    <td>
-                        {% set status_class = 'badge-pending' %}
-                        {% if order.status == 'In Progress' %}{% set status_class = 'badge-in-progress' %}{% endif %}
-                        {% if order.status == 'Ready' %}{% set status_class = 'badge-ready' %}{% endif %}
-                        {% if order.status == 'Delivered' %}{% set status_class = 'badge-delivered' %}{% endif %}
-                        {% if order.status == 'Cancelled' %}{% set status_class = 'badge-cancelled' %}{% endif %}
-                        <span class="badge {{ status_class }}">{{ order.status }}</span>
-                    </td>
-                    <td>
-                        <a href="{{ url_for('orders') }}" class="btn btn-secondary btn-sm">Details</a>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-        {% else %}
-        <div class="empty-state">
-            <p>No orders found matching your search. Try another query or create a new order!</p>
-        </div>
+    <h2 class="section-title">
+        <span>📦 Deliveries Due Today or Earlier</span>
+        {% if pending_delivery %}
+        <span class="badge badge-progress num">{{ pending_delivery|length }}</span>
         {% endif %}
+    </h2>
+
+    {% if pending_delivery %}
+    <div class="delivery-list">
+        {% for order in pending_delivery %}
+        <div class="delivery-item {{ 'overdue' if order.is_overdue else '' }}">
+            <!-- Customer Info -->
+            <div>
+                <div class="delivery-name">{{ order.customer_name or order.name or '—' }}</div>
+                <div class="delivery-meta phone-num">
+                    📞 {{ order.customer_phone or order.phone or 'No phone' }}
+                    {% if order.address %} &bull; {{ order.address }}{% endif %}
+                </div>
+            </div>
+
+            <!-- Due Date / Overdue Status -->
+            <div style="text-align:center;">
+                {% if order.is_overdue %}
+                    <span class="overdue-text">⚠️ Overdue</span><br>
+                    <span class="delivery-meta num" style="color:var(--danger); font-weight:700;">{{ order.due_date }}</span>
+                {% else %}
+                    <span class="delivery-meta" style="color:var(--primary); font-weight:700;">Due Today</span><br>
+                    <span class="delivery-meta num">{{ order.due_date }}</span>
+                {% endif %}
+            </div>
+
+            <!-- Open Button -->
+            <a href="{{ url_for('view_order', order_id=order.id) }}"
+               class="btn btn-primary btn-sm">Open Slip</a>
+        </div>
+        {% endfor %}
     </div>
+    {% else %}
+    <div style="text-align:center; padding:45px 0; color:var(--text-muted);">
+        <div style="font-size:2.8rem; margin-bottom:12px;">🎉</div>
+        <p style="font-size:1.05rem; font-weight:500;">
+            No pending or overdue deliveries for today!
+        </p>
+    </div>
+    {% endif %}
 </div>
+
+<!-- Two Large Action Buttons -->
+<div class="action-btns">
+    <a href="{{ url_for('new_order') }}" class="btn btn-primary btn-lg">
+        📝 New Order Form
+    </a>
+    <a href="{{ url_for('orders') }}" class="btn btn-secondary btn-lg">
+        📋 View All Orders
+    </a>
+</div>
+
 {% endblock %}

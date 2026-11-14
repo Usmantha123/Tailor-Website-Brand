@@ -9,20 +9,33 @@ is_initialized = False
 init_error = None
 
 def init_firebase():
-    """Initialize Firebase Admin SDK using serviceAccountKey.json."""
+    """Initialize Firebase Admin SDK using serviceAccountKey.json or environment variable."""
     global db, is_initialized, init_error
+    import json
     
+    # Check if JSON key is provided in environment variables (for Vercel/Cloud deployment)
+    env_key = os.getenv("FIREBASE_SERVICE_ACCOUNT_KEY") or os.getenv("FIREBASE_KEY_JSON")
+    key_dict = None
+    if env_key:
+        try:
+            key_dict = json.loads(env_key)
+        except Exception as e:
+            print(f"[Firebase Warning] Failed to parse FIREBASE_SERVICE_ACCOUNT_KEY: {e}")
+
     key_path = os.path.join(os.path.dirname(__file__), "serviceAccountKey.json")
     
-    if not os.path.exists(key_path):
+    if not key_dict and not os.path.exists(key_path):
         is_initialized = False
-        init_error = "serviceAccountKey.json file is missing in the project folder."
+        init_error = "serviceAccountKey.json file is missing and FIREBASE_SERVICE_ACCOUNT_KEY environment variable is not set."
         print(f"[Firebase Warning] {init_error}")
         return False
 
     try:
         if not firebase_admin._apps:
-            cred = credentials.Certificate(key_path)
+            if key_dict:
+                cred = credentials.Certificate(key_dict)
+            else:
+                cred = credentials.Certificate(key_path)
             firebase_admin.initialize_app(cred)
         
         db = firestore.client()

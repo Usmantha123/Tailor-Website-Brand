@@ -1,160 +1,187 @@
 {% extends "base.html" %}
-
-{% block title %}تفصیلات آرڈر #{{ order.order_number }} - Tailor Shop Management{% endblock %}
+{% block title %}Order Slip #{{ order.order_number or order.id }} — TS Brand Tailor{% endblock %}
+{% block header_title %}Order Printable Slip{% endblock %}
 
 {% block content %}
-<div dir="rtl" class="desktop-form-wrapper" style="font-family: 'Noto Naskh Arabic', 'Noto Nastaliq Urdu', sans-serif;">
 
-    <!-- Top Bar Title & Navigation Header -->
-    <div class="desktop-form-header no-print">
-        <h2 class="form-title">آرڈر کی تفصیلات (#{{ order.order_number if order.order_number else order.id }})</h2>
-        <div style="display: flex; gap: 8px;">
-            <a href="{{ url_for('orders') }}" class="btn-action btn-refresh-ui">
-                ⬅️ واپس (Back to List)
-            </a>
-            <button type="button" class="btn-action btn-print-ui" onclick="window.print()">
-                🖨️ پرچی نکالیں (Print)
-            </button>
-            <a href="{{ url_for('edit_order', order_id=order.id) }}" class="btn-action btn-save-ui">
-                ✏️ ایڈٹ (Edit Order)
-            </a>
-        </div>
+<!-- Action bar (hidden when printing) -->
+<div class="page-header no-print">
+    <div>
+        <h1 class="page-title">Order Slip</h1>
+        <p class="page-subtitle num" style="font-weight: 700; color: var(--primary);">#{{ order.order_number or order.id }}</p>
     </div>
-
-    <!-- Printable Card Container -->
-    <div id="printableOrderCard" class="top-bar-panel" style="background: #ffffff; padding: 16px;">
-        
-        <!-- Header Info Banner -->
-        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #1e293b; padding-bottom: 10px; margin-bottom: 14px;">
-            <div>
-                <h2 style="margin: 0; font-size: 1.4rem; color: #0f172a;">TS Brand Tailor - آرڈر پرچی</h2>
-                <span style="font-size: 0.9rem; color: #64748b;">تاریخ: <b>{{ order.order_date if order.order_date else '—' }}</b></span>
-            </div>
-            <div style="display: flex; align-items: center; gap: 12px;">
-                <span style="font-size: 1.1rem; font-weight: 700;">آرڈر نمبر: <b>{{ order.order_number if order.order_number else '—' }}</b></span>
-                <span class="green-number-box" style="font-size: 1.2rem; padding: 4px 16px;">
-                    {{ order.customer_number if order.customer_number else 'H100' }}
-                </span>
-            </div>
-        </div>
-
-        <!-- Customer Summary Details Box -->
-        <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; padding: 10px 14px; margin-bottom: 14px; display: grid; grid-template-columns: 1fr 1fr 1.5fr; gap: 12px; font-size: 0.95rem;">
-            <div><b>نام کسٹمر:</b> <span style="font-size: 1.05rem; font-weight: 700; color: #0369a1;">{{ order.customer_name if order.customer_name else '—' }}</span></div>
-            <div><b>فون نمبر:</b> <span style="font-weight: 700;">{{ order.customer_phone if order.customer_phone else '—' }}</span></div>
-            <div><b>پتہ:</b> <span>{{ order.address if order.address else '—' }}</span></div>
-        </div>
-
-        <!-- Main Measurements 4-Column Grid -->
-        <div class="desktop-grid-container">
-
-            <!-- Card 1: قمیض کا ناپ -->
-            <div class="form-card-col">
-                <div class="card-header-banner">قمیض کا ناپ</div>
-                <div class="inputs-stack" style="font-size: 0.95rem;">
-                    <div class="dense-input-row"><span>لمبائی:</span> <b>{{ measurements.shirt_length if measurements.shirt_length else '-' }}</b></div>
-                    <div class="dense-input-row"><span>آستین:</span> <b>{{ measurements.sleeve if measurements.sleeve else '-' }}</b></div>
-                    <div class="dense-input-row"><span>تیرا:</span> <b>{{ measurements.shoulder if measurements.shoulder else '-' }}</b></div>
-                    <div class="dense-input-row"><span>کالر سائز:</span> <b>{{ measurements.collar_size if measurements.collar_size else '-' }}</b></div>
-                    <div class="dense-input-row"><span>چھاتی:</span> <b>{{ measurements.chest if measurements.chest else '-' }}</b></div>
-                    <div class="dense-input-row"><span>بغل:</span> <b>{{ measurements.armpit if measurements.armpit else '-' }}</b></div>
-                    <div class="dense-input-row"><span>دامن:</span> <b>{{ measurements.daaman if measurements.daaman else '-' }}</b></div>
-                    <div class="dense-input-row" style="margin-top: 6px; border-top: 1px dashed #e2e8f0; padding-top: 4px;">
-                        <span>دامن قسم:</span> <b style="color: #0284c7;">{{ measurements.daaman_type if measurements.daaman_type else 'دامن گول' }}</b>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Card 2: شلوار کا ناپ -->
-            <div class="form-card-col">
-                <div class="card-header-banner">شلوار کا ناپ</div>
-                <div class="inputs-stack" style="font-size: 0.95rem;">
-                    <div class="dense-input-row"><span>لمبائی:</span> <b>{{ measurements.shalwar_length if measurements.shalwar_length else '-' }}</b></div>
-                    <div class="dense-input-row"><span>پانچہ:</span> <b>{{ measurements.paancha if measurements.paancha else '-' }}</b></div>
-                    <div class="dense-input-row"><span>آسن:</span> <b>{{ measurements.asan if measurements.asan else '-' }}</b></div>
-                    <div class="dense-input-row"><span>شلوار گھیر:</span> <b>{{ measurements.shalwar_gheer if measurements.shalwar_gheer else '-' }}</b></div>
-                    <div class="dense-input-row"><span>چاک:</span> <b>{{ measurements.chaak if measurements.chaak else '-' }}</b></div>
-                </div>
-            </div>
-
-            <!-- Card 3: ڈیزائن کی تفصیلات -->
-            <div class="form-card-col">
-                <div class="card-header-banner">ڈیزائن کی تفصیلات</div>
-                <div class="inputs-stack" style="font-size: 0.9rem;">
-                    {% if measurements.patti %}<div class="dense-input-row"><span>پٹی:</span> <b>{{ measurements.patti }}</b></div>{% endif %}
-                    {% if measurements.patti_size %}<div class="dense-input-row"><span>پٹی سائز:</span> <b>{{ measurements.patti_size }}</b></div>{% endif %}
-                    {% if measurements.patti_length %}<div class="dense-input-row"><span>پٹی لمبائی:</span> <b>{{ measurements.patti_length }}</b></div>{% endif %}
-                    {% if measurements.paancha_patti %}<div class="dense-input-row"><span>پانچہ پٹی:</span> <b>{{ measurements.paancha_patti }}</b></div>{% endif %}
-                    {% if measurements.stitching %}<div class="dense-input-row"><span>سلائی:</span> <b>{{ measurements.stitching }}</b></div>{% endif %}
-                    {% if measurements.extra_1 %}<div class="dense-input-row"><span>اضافی 1:</span> <b>{{ measurements.extra_1 }}</b></div>{% endif %}
-                    {% if measurements.extra_2 %}<div class="dense-input-row"><span>اضافی 2:</span> <b>{{ measurements.extra_2 }}</b></div>{% endif %}
-                    {% if measurements.cuff_type %}<div class="dense-input-row"><span>کف:</span> <b>{{ measurements.cuff_type }}</b></div>{% endif %}
-                    {% if measurements.cuff_size %}<div class="dense-input-row"><span>کف سائز:</span> <b>{{ measurements.cuff_size }}</b></div>{% endif %}
-                    {% if measurements.collar_nok %}<div class="dense-input-row"><span>کالر نوک:</span> <b>{{ measurements.collar_nok }}</b></div>{% endif %}
-                    {% if measurements.moora %}<div class="dense-input-row"><span>موڑہ:</span> <b>{{ measurements.moora }}</b></div>{% endif %}
-                </div>
-            </div>
-
-            <!-- Card 4: اضافی خصوصیات (Only Ticked Checkboxes) -->
-            <div class="form-card-col checkboxes-panel">
-                <div class="card-header-banner">اضافی خصوصیات</div>
-                <div style="display: flex; flex-direction: column; gap: 6px;">
-                    {% set check_labels = {
-                        'baghair_plate': 'بغیر پلیٹ', 'baghair_label': 'بغیر لیبل', 'chaak_patti_button': 'چاک پٹی بٹن',
-                        'chamak_taar': 'چمک تار', 'steel_button': 'سٹیل بٹن', 'front_pocket': 'سامنے پاکٹ',
-                        'side_pocket_1': 'سائیڈ پاکٹ 1', 'side_pocket_2': 'سائیڈ پاکٹ 2', 'shalwar_pocket': 'شلوار پاکٹ',
-                        'front_pocket_kaaj': 'سامنے پاکٹ کاج', 'cuff_1_kaaj': 'کف ایک کاج', 'cuff_2_kaaj': 'کف دو کاج', 'stud_kaaj': 'سٹڈ کاج'
-                    } %}
-                    {% set ns = namespace(has_checks=false) %}
-                    {% for key, label in check_labels.items() %}
-                        {% if measurements.get(key) %}
-                            {% set ns.has_checks = true %}
-                            <div style="background: #e0f2fe; color: #0369a1; padding: 4px 8px; border-radius: 4px; font-weight: 700; font-size: 0.88rem; display: flex; align-items: center; gap: 4px;">
-                                ✔ {{ label }}
-                            </div>
-                        {% endif %}
-                    {% endfor %}
-                    {% if not ns.has_checks %}
-                        <div style="color: #94a3b8; font-size: 0.88rem; font-style: italic;">کوئی اضافی خصوصیت نہیں</div>
-                    {% endif %}
-                </div>
-            </div>
-
-        </div>
-
+    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+        <a href="{{ url_for('orders') }}" class="btn btn-secondary">← Back to Orders</a>
+        <a href="{{ url_for('edit_order', order_id=order.id) }}" class="btn btn-secondary">✏️ Edit Order</a>
+        <button onclick="window.print()" class="btn btn-primary">🖨️ Print Slip</button>
     </div>
-
-    <!-- Bottom Action Buttons -->
-    <div class="bottom-buttons-bar no-print" style="margin-top: 14px;">
-        <a href="{{ url_for('orders') }}" class="btn-action btn-refresh-ui">
-            ⬅️ واپس (Back)
-        </a>
-        <button type="button" class="btn-action btn-print-ui" onclick="window.print()">
-            🖨️ پرچی نکالیں
-        </button>
-        <a href="{{ url_for('edit_order', order_id=order.id) }}" class="btn-action btn-save-ui">
-            ✏️ ایڈٹ کریں
-        </a>
-    </div>
-
 </div>
 
-<!-- Printable CSS Rules -->
-<style>
-@media print {
-    .no-print, header, aside, footer {
-        display: none !important;
-    }
-    .desktop-form-wrapper {
-        background: transparent !important;
-        padding: 0 !important;
-        box-shadow: none !important;
-    }
-    #printableOrderCard {
-        border: none !important;
-        box-shadow: none !important;
-        width: 100% !important;
-    }
-}
-</style>
+<!-- ===== PRINTABLE SLIP CARD ===== -->
+<div class="print-card">
+
+    <!-- Header: shop name + order/customer numbers -->
+    <div class="print-header">
+        <div>
+            <div class="print-shop-name">🧵 TS Brand Tailor &bull; Customer Slip</div>
+            <div style="font-size:.88rem; color:var(--text-muted); font-family:var(--font-num); margin-top:3px;">
+                Order Date: <b>{{ order.order_date or '—' }}</b>
+                &nbsp;|&nbsp;
+                Order No: <b style="color:var(--primary);">{{ order.order_number or '—' }}</b>
+            </div>
+        </div>
+        <div class="cust-num-box">
+            {{ order.customer_number or 'H—' }}
+        </div>
+    </div>
+
+    <!-- Customer summary -->
+    <div style="background:var(--bg-main); border:1px solid var(--border-color);
+                border-radius:var(--border-radius-sm); padding:14px 18px; margin-bottom:18px;
+                display:grid; grid-template-columns:1fr 1fr 1.5fr; gap:14px; font-size:.95rem;">
+        <div>
+            <span style="color:var(--text-muted); font-size:0.85rem;">Customer Name:</span><br>
+            <strong style="font-size:1.1rem; color:var(--text-main);">{{ order.customer_name or '—' }}</strong>
+        </div>
+        <div>
+            <span style="color:var(--text-muted); font-size:0.85rem;">Phone Number:</span><br>
+            <strong class="phone-num" style="font-size:1.05rem;">{{ order.customer_phone or '—' }}</strong>
+        </div>
+        <div>
+            <span style="color:var(--text-muted); font-size:0.85rem;">Address:</span><br>
+            <span>{{ order.address or '—' }}</span>
+        </div>
+    </div>
+
+    <!-- Price / advance / balance -->
+    <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-bottom:18px;">
+        <div style="background:var(--primary-light); border-radius:var(--border-radius-sm); padding:12px; text-align:center;">
+            <div style="font-size:.82rem; color:var(--text-muted); font-weight:600;">Total Price</div>
+            <div class="num" style="font-weight:700; font-size:1.25rem; color:var(--primary);">
+                Rs. {{ order.price|default(0)|int }}
+            </div>
+        </div>
+        <div style="background:var(--warning-light); border-radius:var(--border-radius-sm); padding:12px; text-align:center;">
+            <div style="font-size:.82rem; color:var(--text-muted); font-weight:600;">Advance Paid</div>
+            <div class="num" style="font-weight:700; font-size:1.25rem; color:var(--warning);">
+                Rs. {{ order.advance|default(0)|int }}
+            </div>
+        </div>
+        <div style="background:var(--danger-light); border-radius:var(--border-radius-sm); padding:12px; text-align:center;">
+            <div style="font-size:.82rem; color:var(--text-muted); font-weight:600;">Remaining Balance</div>
+            <div class="num" style="font-weight:700; font-size:1.25rem; color:var(--danger);">
+                Rs. {{ ((order.price|default(0)|float) - (order.advance|default(0)|float))|int }}
+            </div>
+        </div>
+    </div>
+
+    <!-- Measurements grid -->
+    <div class="slip-grid">
+
+        <!-- Shirt -->
+        <div>
+            <div class="slip-col-title">Kameez / Shirt Measurements (قمیض)</div>
+            {% set shirt_rows = [
+                ('shirt_length','Length / لمبائی'),('sleeve','Sleeve / آستین'),('shoulder','Shoulder / تیرا'),
+                ('collar_size','Collar / کالر سائز'),('chest','Chest / چھاتی'),('armpit','Armpit / بغل'),
+                ('daaman','Daaman / دامن'),('daaman_type','Daaman Type / قسم')
+            ] %}
+            {% for k, l in shirt_rows %}
+            {% if measurements.get(k) %}
+            <div class="slip-row">
+                <span>{{ l }}</span>
+                <span class="num">{{ measurements[k] }}</span>
+            </div>
+            {% endif %}
+            {% endfor %}
+        </div>
+
+        <!-- Shalwar -->
+        <div>
+            <div class="slip-col-title">Shalwar / Trouser Measurements (شلوار)</div>
+            {% set shalwar_rows = [
+                ('shalwar_length','Length / لمبائی'),('paancha','Paancha / پانچہ'),('asan','Asan / آسن'),
+                ('shalwar_gheer','Gheer / گھیر'),('chaak','Chaak / چاک')
+            ] %}
+            {% for k, l in shalwar_rows %}
+            {% if measurements.get(k) %}
+            <div class="slip-row">
+                <span>{{ l }}</span>
+                <span class="num">{{ measurements[k] }}</span>
+            </div>
+            {% endif %}
+            {% endfor %}
+        </div>
+
+        <!-- Design details -->
+        <div>
+            <div class="slip-col-title">Design &amp; Styling Details (ڈیزائن)</div>
+            {% set design_rows = [
+                ('patti','Patti / پٹی'),('patti_size','Patti Size / سائز'),('patti_length','Patti Length / لمبائی'),
+                ('paancha_patti','Paancha Patti / پانچہ پٹی'),('stitching','Stitching / سلائی'),
+                ('extra_1','Extra 1 / اضافی ۱'),('extra_2','Extra 2 / اضافی ۲'),
+                ('cuff_type','Cuff / کف'),('cuff_size','Cuff Size / سائز'),('collar_nok','Collar Nok / نوک'),('moora','Moora / موڑہ')
+            ] %}
+            {% for k, l in design_rows %}
+            {% if measurements.get(k) %}
+            <div class="slip-row">
+                <span>{{ l }}</span>
+                <span>{{ measurements[k] }}</span>
+            </div>
+            {% endif %}
+            {% endfor %}
+        </div>
+
+        <!-- Checkboxes (ticked only) -->
+        <div>
+            <div class="slip-col-title">Special Features &amp; Options (اضافی خصوصیات)</div>
+            <div class="checked-list">
+                {% set all_checks = [
+                    ('baghair_plate','بغیر پلیٹ'),('baghair_label','بغیر لیبل'),
+                    ('chaak_patti_button','چاک پٹی بٹن'),('chamak_taar','چمک تار'),
+                    ('steel_button','سٹیل بٹن'),('front_pocket','سامنے پاکٹ'),
+                    ('side_pocket_1','سائیڈ پاکٹ ۱'),('side_pocket_2','سائیڈ پاکٹ ۲'),
+                    ('shalwar_pocket','شلوار پاکٹ'),('front_pocket_kaaj','سامنے پاکٹ کاج'),
+                    ('cuff_1_kaaj','کف ایک کاج'),('cuff_2_kaaj','کف دو کاج'),
+                    ('stud_kaaj','سٹڈ کاج')
+                ] %}
+                {% set ns = namespace(any=false) %}
+                {% for k, l in all_checks %}
+                {% if measurements.get(k) %}
+                {% set ns.any = true %}
+                <span class="checked-tag">✓ {{ l }}</span>
+                {% endif %}
+                {% endfor %}
+                {% if not ns.any %}
+                <span style="color:var(--text-muted); font-size:.85rem;">Standard finish</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Due date + status -->
+    <div style="margin-top:18px; padding-top:14px; border-top:1px dashed var(--border-color);
+                display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+        <div>
+            <span style="color:var(--text-muted); font-size:0.9rem;">Delivery Due Date:</span>
+            <strong class="num" style="font-size:1.05rem; margin-left:6px;">{{ order.due_date or '—' }}</strong>
+        </div>
+        <div>
+            <span style="color:var(--text-muted); font-size:0.9rem;">Status:</span>
+            <strong style="margin-left:6px;">{{ order.status or 'زیر تکمیل' }}</strong>
+        </div>
+    </div>
+
+</div><!-- /print-card -->
+
+<!-- WhatsApp button (hidden in print) -->
+{% set phone_wa = (order.customer_phone or '').lstrip('0') %}
+{% set wa_msg = 'السلام علیکم ' ~ (order.customer_name or '') ~ '، آپ کا سوٹ تیار ہے۔ ٹی ایس برانڈ ٹیلر' %}
+<div class="no-print" style="margin-top:16px;">
+    <a href="https://wa.me/92{{ phone_wa }}?text={{ wa_msg | urlencode }}"
+       target="_blank" class="btn btn-success">
+        📱 Send WhatsApp Notification
+    </a>
+</div>
+
 {% endblock %}
