@@ -17,10 +17,23 @@ def init_firebase():
     env_key = os.getenv("FIREBASE_SERVICE_ACCOUNT_KEY") or os.getenv("FIREBASE_KEY_JSON")
     key_dict = None
     if env_key:
+        env_key = env_key.strip()
+        if (env_key.startswith("'") and env_key.endswith("'")) or (env_key.startswith('"') and env_key.endswith('"')):
+            env_key = env_key[1:-1].strip()
         try:
             key_dict = json.loads(env_key)
-        except Exception as e:
-            print(f"[Firebase Warning] Failed to parse FIREBASE_SERVICE_ACCOUNT_KEY: {e}")
+        except Exception:
+            try:
+                import base64
+                decoded = base64.b64decode(env_key).decode('utf-8')
+                key_dict = json.loads(decoded)
+            except Exception:
+                try:
+                    # Fix escaped newlines in private_key if needed
+                    fixed_key = env_key.replace('\\n', '\n')
+                    key_dict = json.loads(fixed_key)
+                except Exception as e:
+                    print(f"[Firebase Warning] Failed to parse FIREBASE_SERVICE_ACCOUNT_KEY: {e}")
 
     key_path = os.path.join(os.path.dirname(__file__), "serviceAccountKey.json")
     
