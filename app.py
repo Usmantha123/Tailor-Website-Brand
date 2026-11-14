@@ -49,7 +49,9 @@ def login_logout_redirect():
 
 @app.route("/firebase-error")
 def firebase_error():
-    """Friendly fallback error page when serviceAccountKey.json is missing or Firestore is unreachable."""
+    """Friendly fallback error page. If Firebase is already connected, redirect directly to dashboard."""
+    if firebase_db.is_initialized or firebase_db.init_firebase():
+        return redirect(url_for("dashboard"))
     return render_template("firebase_error.html", error_message=firebase_db.init_error)
 
 # ==============================================================================
